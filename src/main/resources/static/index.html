@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAP - Análise de Desempenho</title>
+</head>
+<body>
+
+    <h1>Análise de Desempenho</h1>
+
+    <label for="acertos">Quantidade de acertos:</label>
+    <input type="number" id="acertos">
+
+    <br><br>
+
+    <label for="totalQuestoes">Total de questões:</label>
+    <input type="number" id="totalQuestoes">
+
+    <br><br>
+
+    <button onclick="analisarDesempenho()">Analisar desempenho</button>
+
+    <hr>
+
+    <h2>Resultado</h2>
+
+    <p id="percentual"></p>
+    <p id="dificuldade"></p>
+    <p id="prioridade"></p>
+    <p id="recomendacao"></p>
+
+    <script>
+        async function analisarDesempenho() {
+
+            const acertos = document.getElementById("acertos").value;
+            const totalQuestoes = document.getElementById("totalQuestoes").value;
+
+            const url =
+                `/api/analises?acertos=${acertos}&totalQuestoes=${totalQuestoes}`;
+
+            const resposta = await fetch(url, {
+                method: "POST"
+            });
+
+            const dados = await resposta.json();
+
+            document.getElementById("percentual").innerText =
+                `Percentual: ${dados.percentual}%`;
+
+            document.getElementById("dificuldade").innerText =
+                `Dificuldade: ${dados.dificuldade}`;
+
+            document.getElementById("prioridade").innerText =
+                `Prioridade: ${dados.prioridade}`;
+
+            document.getElementById("recomendacao").innerText =
+                `Recomendação: ${dados.recomendacao}`;
+        }
+    </script>
+
+</body>
+</html>
