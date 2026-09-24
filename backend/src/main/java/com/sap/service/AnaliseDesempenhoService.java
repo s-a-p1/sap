@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service;
 import com.sap.model.AnaliseDesempenho;
 import com.sap.repository.AnaliseDesempenhoRepository;
 
+import com.sap.model.Resultado;
+
 @Service
 public class AnaliseDesempenhoService {
 
@@ -63,5 +65,67 @@ if (acertos > totalQuestoes) {
 
         return repository.save(analise);
     }
+
+public AnaliseDesempenho analisarResultado(Resultado resultado) {
+
+    if (resultado == null) {
+        throw new IllegalArgumentException("O resultado é obrigatório.");
+    }
+
+    Integer acertos = resultado.getAcertos();
+    Integer totalQuestoes = resultado.getTotalQuestoes();
+
+    if (totalQuestoes == null || totalQuestoes <= 0) {
+        throw new IllegalArgumentException(
+                "O total de questões deve ser maior que zero."
+        );
+    }
+
+    if (acertos == null || acertos < 0) {
+        throw new IllegalArgumentException(
+                "A quantidade de acertos é inválida."
+        );
+    }
+
+    if (acertos > totalQuestoes) {
+        throw new IllegalArgumentException(
+                "A quantidade de acertos não pode ser maior que o total de questões."
+        );
+    }
+
+    double percentual = resultado.getPercentual().doubleValue();
+
+    AnaliseDesempenho analise = new AnaliseDesempenho();
+
+    analise.setResultado(resultado);
+    analise.setAcertos(acertos);
+    analise.setTotalQuestoes(totalQuestoes);
+    analise.setPercentual(percentual);
+
+    if (percentual < 50) {
+        analise.setDificuldade("ALTA");
+        analise.setPrioridade("ALTA");
+        analise.setRecomendacao(
+                "Revise os conceitos fundamentais antes de realizar uma nova avaliacao."
+        );
+
+    } else if (percentual < 70) {
+        analise.setDificuldade("MEDIA");
+        analise.setPrioridade("MEDIA");
+        analise.setRecomendacao(
+                "Revise os pontos de erro e continue praticando."
+        );
+
+    } else {
+        analise.setDificuldade("BAIXA");
+        analise.setPrioridade("BAIXA");
+        analise.setRecomendacao(
+                "Bom dominio do conteudo. Voce pode avancar para conteudos mais complexos."
+        );
+    }
+
+    return repository.save(analise);
+}
+
 }
 

@@ -22,15 +22,19 @@ public class CorrecaoAvaliacaoService {
     private final AvaliacaoRepository avaliacaoRepository;
     private final QuestaoRepository questaoRepository;
     private final ResultadoRepository resultadoRepository;
+    private final AnaliseDesempenhoService analiseDesempenhoService;
 
     public CorrecaoAvaliacaoService(
-            AvaliacaoRepository avaliacaoRepository,
-            QuestaoRepository questaoRepository,
-            ResultadoRepository resultadoRepository) {
+        AvaliacaoRepository avaliacaoRepository,
+        QuestaoRepository questaoRepository,
+        ResultadoRepository resultadoRepository,
+        AnaliseDesempenhoService analiseDesempenhoService) {
 
         this.avaliacaoRepository = avaliacaoRepository;
         this.questaoRepository = questaoRepository;
         this.resultadoRepository = resultadoRepository;
+        this.analiseDesempenhoService = analiseDesempenhoService;
+  
     }
 
     public ResultadoAvaliacaoResponse corrigir(
@@ -86,6 +90,8 @@ public class CorrecaoAvaliacaoService {
         );
 
         resultado = resultadoRepository.save(resultado);
+
+        analiseDesempenhoService.analisarResultado(resultado);
 
         return new ResultadoAvaliacaoResponse(
                 resultado.getId(),
