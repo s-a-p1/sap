@@ -3,6 +3,7 @@ package com.sap.service;
 import com.sap.dto.FinalizarAvaliacaoRequest;
 import com.sap.dto.RespostaQuestaoRequest;
 import com.sap.dto.ResultadoAvaliacaoResponse;
+import com.sap.model.AnaliseDesempenho;
 import com.sap.model.Avaliacao;
 import com.sap.model.Questao;
 import com.sap.model.Resultado;
@@ -91,14 +92,18 @@ public class CorrecaoAvaliacaoService {
 
         resultado = resultadoRepository.save(resultado);
 
-        analiseDesempenhoService.analisarResultado(resultado);
+        AnaliseDesempenho analise =
+                analiseDesempenhoService.analisarResultado(resultado);
 
         return new ResultadoAvaliacaoResponse(
-                resultado.getId(),
-                totalQuestoes,
-                acertos,
-                erros,
-                percentual
+        resultado.getId(),
+        totalQuestoes,
+        acertos,
+        erros,
+        percentual,
+        analise.getDificuldade(),
+        analise.getPrioridade(),
+        analise.getRecomendacao()
         );
     }
 }

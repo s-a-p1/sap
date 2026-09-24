@@ -126,6 +126,29 @@ function App() {
             Erros: <strong>{resultado.erros}</strong>
           </p>
 
+          <div className="analise-desempenho">
+            <h3>Análise de desempenho</h3>
+
+            <p>
+              Nível de dificuldade:{" "}
+              <strong>{resultado.dificuldade}</strong>
+            </p>
+
+            <p>
+              Prioridade de estudo:{" "}
+              <strong>{resultado.prioridade}</strong>
+            </p>
+
+            <p>
+              Recomendação:
+            </p>
+
+            <p>
+              {resultado.recomendacao}
+            </p>
+          </div>
+
+
           <button
             onClick={() => {
               setResultado(null);
