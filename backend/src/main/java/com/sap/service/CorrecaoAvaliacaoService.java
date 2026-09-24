@@ -11,6 +11,7 @@ import com.sap.repository.AvaliacaoRepository;
 import com.sap.repository.QuestaoRepository;
 import com.sap.repository.ResultadoRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -38,6 +39,7 @@ public class CorrecaoAvaliacaoService {
   
     }
 
+    @Transactional
     public ResultadoAvaliacaoResponse corrigir(
             FinalizarAvaliacaoRequest request) {
 
