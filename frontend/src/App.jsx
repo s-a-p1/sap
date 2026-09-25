@@ -64,9 +64,14 @@ function App() {
 
   const [modalLegal, setModalLegal] = useState(null);
 
-  const [questoes, setQuestoes] = useState([]);
+    const [questoes, setQuestoes] = useState([]);
   const [respostas, setRespostas] = useState({});
   const [resultado, setResultado] = useState(null);
+
+  const [buscaLivros, setBuscaLivros] = useState("");
+  const [livros, setLivros] = useState([]);
+  const [buscandoLivros, setBuscandoLivros] = useState(false);
+  const [erroLivros, setErroLivros] = useState("");
 
   const [carregando, setCarregando] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -89,14 +94,17 @@ function App() {
     verificarSessao();
   }, []);
 
-  useEffect(() => {
-    if (usuario) {
+    useEffect(() => {
+    if (usuario?.tipo === "ESTUDANTE") {
       carregarQuestoes();
-    } else {
-      setQuestoes([]);
-      setRespostas({});
-      setResultado(null);
+      return;
     }
+
+    setQuestoes([]);
+    setRespostas({});
+    setResultado(null);
+    setErro("");
+    setCarregando(false);
   }, [usuario]);
 
   async function verificarSessao() {
@@ -315,6 +323,60 @@ function App() {
     } finally {
       setCarregando(false);
     }
+    }
+
+  async function buscarLivros(event) {
+    event.preventDefault();
+
+    const termo = buscaLivros.trim();
+
+    if (!termo) {
+      setErroLivros("Digite um assunto para buscar materiais.");
+      setLivros([]);
+      return;
+    }
+
+    try {
+      setBuscandoLivros(true);
+      setErroLivros("");
+
+      const response = await fetch(
+        `${API_URL}/api/livros?busca=${encodeURIComponent(termo)}`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
+
+      if (response.status === 401) {
+        setUsuario(null);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Erro ao buscar livros.");
+      }
+
+      const dados = await response.json();
+
+      setLivros(dados);
+
+      if (dados.length === 0) {
+        setErroLivros(
+          "Nenhum material encontrado para essa busca."
+        );
+      }
+    } catch (error) {
+      console.error("Erro ao buscar livros:", error);
+
+      setErroLivros(
+        "Não foi possível buscar os materiais no momento."
+      );
+
+      setLivros([]);
+    } finally {
+      setBuscandoLivros(false);
+    }
   }
 
   function selecionarResposta(questaoId, alternativa) {
@@ -460,45 +522,131 @@ function App() {
                 ser interpretadas dentro do contexto educacional.
               </p>
             </div>
-          ) : (
+                    ) : (
             <div className="texto-legal">
               <p>
-                Esta Política de Privacidade descreve como os dados
-                utilizados pelo SAP são tratados no contexto da
-                aplicação.
+                Esta Política de Privacidade descreve como o Sistema
+                de Acompanhamento e Personalização da Aprendizagem
+                (SAP) coleta, utiliza e protege os dados pessoais
+                necessários ao funcionamento da aplicação.
               </p>
 
-              <h3>1. Dados da conta</h3>
+              <h3>1. Dados pessoais coletados</h3>
 
               <p>
-                O sistema pode utilizar informações necessárias à
-                autenticação, como nome, e-mail, provedor de acesso e
-                identificador interno do usuário.
+                Para criação e utilização da conta, o SAP pode tratar
+                dados como nome, endereço de e-mail, tipo de usuário,
+                provedor de autenticação e identificador associado ao
+                provedor externo, quando aplicável.
+              </p>
+
+              <p>
+                Nas contas criadas diretamente no SAP, a senha é
+                armazenada de forma criptografada por meio de hash,
+                não sendo mantida em texto simples.
               </p>
 
               <h3>2. Dados educacionais</h3>
 
               <p>
-                Respostas de avaliações, resultados e informações de
-                desempenho podem ser processados para oferecer
-                acompanhamento e recomendações de estudo.
+                Durante a utilização do sistema, podem ser tratados
+                dados relacionados às avaliações, incluindo respostas,
+                quantidade de acertos e erros, percentual de
+                desempenho, análises e recomendações de estudo.
               </p>
 
-              <h3>3. Login externo</h3>
+              <h3>3. Finalidade do tratamento</h3>
 
               <p>
-                Quando Google ou GitHub forem utilizados para
-                autenticação, o processo também estará sujeito às
-                políticas aplicáveis desses provedores.
+                Os dados são utilizados para autenticar e identificar
+                usuários, controlar o acesso conforme o perfil,
+                disponibilizar avaliações, registrar resultados,
+                acompanhar o desempenho acadêmico, gerar recomendações
+                de estudo e manter a segurança e a rastreabilidade das
+                operações realizadas no sistema.
               </p>
 
-              <h3>4. Segurança</h3>
+              <h3>4. Login com Google e GitHub</h3>
 
               <p>
-                Credenciais sensíveis dos provedores de autenticação
-                não são armazenadas no código do frontend.
+                O SAP permite autenticação por meio do Google e do
+                GitHub. Nesses casos, podem ser recebidos dados
+                necessários à identificação da conta, como nome,
+                e-mail e identificador do provedor.
               </p>
-            </div>
+
+              <p>
+                O uso desses serviços também está sujeito às políticas
+                de privacidade e às condições estabelecidas pelos
+                respectivos provedores.
+              </p>
+
+              <h3>5. Logs de auditoria</h3>
+
+              <p>
+                Para fins de segurança e rastreabilidade, o SAP mantém
+                registros de determinadas operações realizadas no
+                sistema. Esses registros podem conter o identificador
+                do usuário, e-mail, tipo da ação realizada, descrição
+                da operação e data e hora do evento.
+              </p>
+
+              <p>
+                Entre as operações que podem ser registradas estão
+                cadastro, autenticação, tentativas de login sem
+                sucesso, logout e finalização de avaliações.
+              </p>
+
+              <h3>6. Pesquisa de materiais externos</h3>
+
+              <p>
+                A funcionalidade "Materiais para estudo" utiliza a
+                Open Library para realizar pesquisas bibliográficas.
+                Para executar a consulta, o termo de pesquisa
+                informado pelo usuário é enviado pelo backend do SAP
+                ao serviço externo.
+              </p>
+
+              <p>
+                O SAP não envia à Open Library senhas, respostas de
+                avaliações, resultados acadêmicos ou logs de
+                auditoria para realizar essa pesquisa.
+              </p>
+
+              <h3>7. Armazenamento e segurança</h3>
+
+              <p>
+                Os dados necessários ao funcionamento do SAP são
+                armazenados no banco de dados da aplicação. O sistema
+                utiliza mecanismos de autenticação, autorização por
+                perfil e proteção das senhas das contas locais.
+              </p>
+
+              <p>
+                Credenciais sensíveis utilizadas para configuração
+                dos provedores externos não são armazenadas
+                diretamente no código do frontend.
+              </p>
+
+              <h3>8. Direitos do titular</h3>
+
+              <p>
+                O titular dos dados pode solicitar informações sobre
+                o tratamento de seus dados pessoais e, quando
+                aplicável, requerer acesso, correção, atualização,
+                anonimização, bloqueio ou eliminação de dados tratados
+                em desconformidade, observadas as obrigações legais e
+                acadêmicas aplicáveis ao sistema.
+              </p>
+
+              <h3>9. Transparência</h3>
+
+              <p>
+                Esta Política de Privacidade e os Termos de Uso
+                permanecem disponíveis aos usuários no próprio
+                sistema para consulta.
+              </p>
+                        </div>
           )}
         </section>
       </div>
@@ -823,6 +971,133 @@ function App() {
     );
   }
 
+    if (usuario?.tipo === "PROFESSOR") {
+    return (
+      <div className="app-page">
+        <header className="topbar">
+          <div className="topbar-conteudo">
+            <div>
+              <div className="logo-marca logo-topbar">
+                SAP
+              </div>
+
+              <span className="topbar-subtitulo">
+                Aprendizagem personalizada
+              </span>
+            </div>
+
+            <div className="usuario-menu">
+              <div className="avatar">
+                {usuario.nome?.charAt(0)?.toUpperCase() || "P"}
+              </div>
+
+              <div className="usuario-info">
+                <strong>{usuario.nome}</strong>
+                <span>{usuario.email}</span>
+              </div>
+
+              <button
+                className="botao-sair"
+                type="button"
+                onClick={fazerLogout}
+              >
+                Sair
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <main className="conteudo-app professor-main">
+          <section className="professor-hero">
+            <span className="secao-etiqueta">
+              Área do professor
+            </span>
+
+            <h1>Olá, {usuario.nome}</h1>
+
+            <p>
+              Acesse as informações acadêmicas disponíveis para
+              acompanhamento das atividades do SAP.
+            </p>
+          </section>
+
+          <section className="professor-grid">
+            <article className="professor-card">
+              <div className="professor-card-icone">
+                D
+              </div>
+
+              <div className="professor-card-conteudo">
+                <span className="professor-card-tipo">
+                  CONTEÚDO
+                </span>
+
+                <h2>Disciplinas</h2>
+
+                <p>
+                  Consulte as disciplinas cadastradas no sistema.
+                </p>
+              </div>
+            </article>
+
+            <article className="professor-card">
+              <div className="professor-card-icone">
+                A
+              </div>
+
+              <div className="professor-card-conteudo">
+                <span className="professor-card-tipo">
+                  CONTEÚDO
+                </span>
+
+                <h2>Assuntos</h2>
+
+                <p>
+                  Consulte os assuntos relacionados às disciplinas.
+                </p>
+              </div>
+            </article>
+
+            <article className="professor-card">
+              <div className="professor-card-icone">
+                AV
+              </div>
+
+              <div className="professor-card-conteudo">
+                <span className="professor-card-tipo">
+                  AVALIAÇÕES
+                </span>
+
+                <h2>Avaliações</h2>
+
+                <p>
+                  Consulte as avaliações disponíveis no sistema.
+                </p>
+              </div>
+            </article>
+          </section>
+
+          <section className="professor-seguranca">
+            <div className="professor-seguranca-icone">
+              ✓
+            </div>
+
+            <div>
+              <strong>
+                Acesso de professor ativo
+              </strong>
+
+              <p>
+                As funcionalidades de responder questões e finalizar
+                avaliações são restritas aos estudantes.
+              </p>
+            </div>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   if (carregando) {
     return (
       <div className="tela-carregamento">
@@ -1005,7 +1280,84 @@ function App() {
         </div>
       </header>
 
-      <main className="conteudo-app">
+            <main className="conteudo-app">
+        <section className="materiais-estudo">
+          <div className="materiais-cabecalho">
+            <div>
+              <span className="secao-etiqueta">
+                Biblioteca externa
+              </span>
+
+              <h2>Materiais para estudo</h2>
+
+              <p>
+                Pesquise livros relacionados aos assuntos que você
+                está estudando. Os resultados são fornecidos pela
+                Open Library.
+              </p>
+            </div>
+          </div>
+
+          <form
+            className="materiais-busca"
+            onSubmit={buscarLivros}
+          >
+            <input
+              type="text"
+              value={buscaLivros}
+              onChange={(event) =>
+                setBuscaLivros(event.target.value)
+              }
+              placeholder="Ex.: Java, SQL, banco de dados..."
+              aria-label="Buscar materiais para estudo"
+            />
+
+            <button
+              type="submit"
+              disabled={buscandoLivros}
+            >
+              {buscandoLivros ? "Buscando..." : "Buscar livros"}
+            </button>
+          </form>
+
+          {erroLivros && (
+            <p className="materiais-erro">
+              {erroLivros}
+            </p>
+          )}
+
+          {livros.length > 0 && (
+            <div className="materiais-grid">
+              {livros.map((livro, index) => (
+                <article
+                  className="material-card"
+                  key={livro.chave || index}
+                >
+                  <span className="material-tipo">
+                    LIVRO
+                  </span>
+
+                  <h3>
+                    {livro.titulo || "Título não informado"}
+                  </h3>
+
+                  <p className="material-autor">
+                    {livro.autor || "Autor não informado"}
+                  </p>
+
+                  <div className="material-rodape">
+                    <span>
+                      {livro.anoPublicacao
+                        ? `Primeira publicação: ${livro.anoPublicacao}`
+                        : "Ano não informado"}
+                    </span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
         <section className="avaliacao-cabecalho">
           <div>
             <span className="secao-etiqueta">

@@ -7,6 +7,8 @@ import com.sap.service.GoogleOAuth2UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import org.springframework.http.HttpMethod;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -50,7 +52,8 @@ public class SecurityConfig {
         http
                 .authenticationProvider(authenticationProvider)
 
-                .cors(cors -> {})
+                .cors(cors -> {
+                })
 
                 .csrf(csrf -> csrf.disable())
 
@@ -61,7 +64,6 @@ public class SecurityConfig {
                                 .oidcUserService(googleOAuth2UserService)
                         )
 
-                        
                         .defaultSuccessUrl(
                                 "http://localhost:5173",
                                 true
@@ -80,6 +82,7 @@ public class SecurityConfig {
                                 if (detalhe.contains(
                                         "Não foi possível obter um e-mail válido"
                                 )) {
+
                                     mensagem =
                                             "Não foi possível realizar o login. "
                                             + "Não foi possível obter um e-mail válido da sua conta.";
@@ -116,10 +119,23 @@ public class SecurityConfig {
                         .authenticated()
 
                         .requestMatchers(
-                                "/api/questoes/**",
-                                "/api/avaliacoes/**"
+                                HttpMethod.GET,
+                                "/api/disciplinas/**",
+                                "/api/assuntos/**",
+                                "/api/avaliacoes",
+                                "/api/livros/**"
                         )
-                        .authenticated()
+                        .hasAnyRole(
+                                "ESTUDANTE",
+                                "PROFESSOR"
+                        )
+
+                        .requestMatchers(
+                                "/api/questoes/**",
+                                "/api/avaliacoes/finalizar",
+                                "/api/analises/**"
+                        )
+                        .hasRole("ESTUDANTE")
 
                         .anyRequest()
                         .authenticated()

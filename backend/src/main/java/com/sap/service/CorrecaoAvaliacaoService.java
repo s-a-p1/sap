@@ -11,7 +11,6 @@ import com.sap.model.Usuario;
 import com.sap.repository.AvaliacaoRepository;
 import com.sap.repository.QuestaoRepository;
 import com.sap.repository.ResultadoRepository;
-import com.sap.repository.UsuarioRepository;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +27,6 @@ public class CorrecaoAvaliacaoService {
     private final QuestaoRepository questaoRepository;
     private final ResultadoRepository resultadoRepository;
     private final AnaliseDesempenhoService analiseDesempenhoService;
-    private final UsuarioRepository usuarioRepository;
     private final AuditoriaService auditoriaService;
 
     public CorrecaoAvaliacaoService(
@@ -36,30 +34,24 @@ public class CorrecaoAvaliacaoService {
             QuestaoRepository questaoRepository,
             ResultadoRepository resultadoRepository,
             AnaliseDesempenhoService analiseDesempenhoService,
-            UsuarioRepository usuarioRepository,
             AuditoriaService auditoriaService) {
 
         this.avaliacaoRepository = avaliacaoRepository;
         this.questaoRepository = questaoRepository;
         this.resultadoRepository = resultadoRepository;
         this.analiseDesempenhoService = analiseDesempenhoService;
-        this.usuarioRepository = usuarioRepository;
         this.auditoriaService = auditoriaService;
     }
 
     @Transactional
     public ResultadoAvaliacaoResponse corrigir(
-            FinalizarAvaliacaoRequest request) {
+            FinalizarAvaliacaoRequest request,
+            Usuario usuario) {
 
         Avaliacao avaliacao = avaliacaoRepository
                 .findById(request.getAvaliacaoId())
                 .orElseThrow(() ->
                         new RuntimeException("Avaliação não encontrada"));
-
-        Usuario usuario = usuarioRepository
-                .findById(request.getUsuarioId())
-                .orElseThrow(() ->
-                        new RuntimeException("Usuário não encontrado"));
 
         List<Questao> questoes =
                 questaoRepository.findByAvaliacao_Id(
