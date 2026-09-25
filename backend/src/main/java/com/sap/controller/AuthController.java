@@ -1,12 +1,11 @@
 package com.sap.controller;
 
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import com.sap.model.ProvedorAutenticacao;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import com.sap.dto.CadastroUsuarioRequest;
 import com.sap.dto.LoginRequest;
+import com.sap.model.ProvedorAutenticacao;
 import com.sap.model.Usuario;
 import com.sap.repository.UsuarioRepository;
+import com.sap.service.AuditoriaService;
 import com.sap.service.UsuarioService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,9 +19,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -31,15 +33,18 @@ public class AuthController {
     private final UsuarioService usuarioService;
     private final AuthenticationManager authenticationManager;
     private final UsuarioRepository usuarioRepository;
+    private final AuditoriaService auditoriaService;
 
     public AuthController(
             UsuarioService usuarioService,
             AuthenticationManager authenticationManager,
-            UsuarioRepository usuarioRepository) {
+            UsuarioRepository usuarioRepository,
+            AuditoriaService auditoriaService) {
 
         this.usuarioService = usuarioService;
         this.authenticationManager = authenticationManager;
         this.usuarioRepository = usuarioRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @PostMapping("/cadastro")
@@ -47,8 +52,14 @@ public class AuthController {
             @Valid @RequestBody CadastroUsuarioRequest request) {
 
         try {
-
             Usuario usuario = usuarioService.cadastrar(request);
+
+            auditoriaService.registrar(
+                    usuario.getId(),
+                    usuario.getEmail(),
+                    "CADASTRO",
+                    "Conta de usuário criada com sucesso."
+            );
 
             return ResponseEntity.status(HttpStatus.CREATED).body(
                     Map.of(
@@ -61,7 +72,6 @@ public class AuthController {
             );
 
         } catch (IllegalArgumentException e) {
-
             return ResponseEntity
                     .badRequest()
                     .body(Map.of("erro", e.getMessage()));
@@ -73,11 +83,10 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request,
             HttpServletRequest httpRequest) {
 
+        String emailNormalizado =
+                request.getEmail().trim().toLowerCase();
+
         try {
-
-            String emailNormalizado =
-                    request.getEmail().trim().toLowerCase();
-
             Authentication authentication =
                     authenticationManager.authenticate(
                             new UsernamePasswordAuthenticationToken(
@@ -98,144 +107,100 @@ public class AuthController {
                             securityContext
                     );
 
-            return usuarioRepository.findByEmail(emailNormalizado)
-                    .<ResponseEntity<?>>map(usuario ->
-                            ResponseEntity.ok(
-                                    Map.of(
-                                            "mensagem", "Login realizado com sucesso.",
-                                            "id", usuario.getId(),
-                                            "nome", usuario.getNome(),
-                                            "email", usuario.getEmail(),
-                                            "tipo", usuario.getTipo(),
-                                            "provedor", usuario.getProvedor().name()
-                                    )
-                            )
+            Optional<Usuario> usuarioEncontrado =
+                    usuarioRepository.findByEmail(emailNormalizado);
+
+            if (usuarioEncontrado.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(
+                                "erro",
+                                "Usuário não encontrado."
+                        ));
+            }
+
+            Usuario usuario = usuarioEncontrado.get();
+
+            auditoriaService.registrar(
+                    usuario.getId(),
+                    usuario.getEmail(),
+                    "LOGIN",
+                    "Login local realizado com sucesso."
+            );
+
+            return ResponseEntity.ok(
+                    Map.of(
+                            "mensagem", "Login realizado com sucesso.",
+                            "id", usuario.getId(),
+                            "nome", usuario.getNome(),
+                            "email", usuario.getEmail(),
+                            "tipo", usuario.getTipo(),
+                            "provedor", usuario.getProvedor().name()
                     )
-                    .orElseGet(() ->
-                            ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                                    .body(Map.of(
-                                            "erro", "Usuário não encontrado."
-                                    ))
-                    );
+            );
 
         } catch (AuthenticationException e) {
+            Usuario usuario =
+                    usuarioRepository.findByEmail(emailNormalizado)
+                            .orElse(null);
+
+            auditoriaService.registrar(
+                    usuario != null ? usuario.getId() : null,
+                    emailNormalizado,
+                    "LOGIN_FALHOU",
+                    "Tentativa de login local sem sucesso."
+            );
 
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of(
-                            "erro", "E-mail ou senha inválidos."
+                            "erro",
+                            "E-mail ou senha inválidos."
                     ));
         }
     }
 
     @GetMapping("/me")
-        public ResponseEntity<?> usuarioAtual(Authentication authentication) {
+    public ResponseEntity<?> usuarioAtual(Authentication authentication) {
 
-        if (authentication == null || !authentication.isAuthenticated()) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of(
-                                "erro", "Usuário não autenticado."
-                        ));
-        }
+        Optional<Usuario> usuario =
+                buscarUsuarioAutenticado(authentication);
 
-        if (authentication instanceof OAuth2AuthenticationToken oauthToken) {
-
-                String registrationId =
-                        oauthToken.getAuthorizedClientRegistrationId();
-
-                OAuth2User oauth2User = oauthToken.getPrincipal();
-
-                ProvedorAutenticacao provedor;
-                String provedorId;
-
-                if ("github".equalsIgnoreCase(registrationId)) {
-
-                Object idAttribute = oauth2User.getAttribute("id");
-
-                if (idAttribute == null) {
-                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                                .body(Map.of(
-                                        "erro",
-                                        "Não foi possível identificar o usuário GitHub."
-                                ));
-                }
-
-                provedor = ProvedorAutenticacao.GITHUB;
-                provedorId = idAttribute.toString();
-
-                } else if ("google".equalsIgnoreCase(registrationId)) {
-
-                Object subAttribute = oauth2User.getAttribute("sub");
-
-                if (subAttribute == null) {
-                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                                .body(Map.of(
-                                        "erro",
-                                        "Não foi possível identificar o usuário Google."
-                                ));
-                }
-
-                provedor = ProvedorAutenticacao.GOOGLE;
-                provedorId = subAttribute.toString();
-
-                } else {
-
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of(
-                                "erro",
-                                "Provedor OAuth2 não reconhecido."
-                        ));
-                }
-
-                return usuarioRepository
-                        .findByProvedorAndProvedorId(
-                                provedor,
-                                provedorId
-                        )
-                        .<ResponseEntity<?>>map(usuario ->
-                                ResponseEntity.ok(
-                                        Map.of(
-                                                "id", usuario.getId(),
-                                                "nome", usuario.getNome(),
-                                                "email", usuario.getEmail(),
-                                                "tipo", usuario.getTipo(),
-                                                "provedor", usuario.getProvedor().name()
-                                        )
-                                )
-                        )
-                        .orElseGet(() ->
-                                ResponseEntity.status(HttpStatus.NOT_FOUND)
-                                        .body(Map.of(
-                                                "erro",
-                                                "Usuário OAuth2 não encontrado."
-                                        ))
-                        );
-        }
-
-        String email = authentication.getName();
-
-        return usuarioRepository.findByEmail(email)
-                .<ResponseEntity<?>>map(usuario ->
+        return usuario
+                .<ResponseEntity<?>>map(valor ->
                         ResponseEntity.ok(
                                 Map.of(
-                                        "id", usuario.getId(),
-                                        "nome", usuario.getNome(),
-                                        "email", usuario.getEmail(),
-                                        "tipo", usuario.getTipo(),
-                                        "provedor", usuario.getProvedor().name()
+                                        "id", valor.getId(),
+                                        "nome", valor.getNome(),
+                                        "email", valor.getEmail(),
+                                        "tipo", valor.getTipo(),
+                                        "provedor", valor.getProvedor().name()
                                 )
                         )
                 )
                 .orElseGet(() ->
-                        ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                                 .body(Map.of(
                                         "erro",
-                                        "Usuário não encontrado."
+                                        "Usuário não autenticado."
                                 ))
                 );
-        }
+    }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletRequest request) {
+    public ResponseEntity<?> logout(
+            HttpServletRequest request,
+            Authentication authentication) {
+
+        Optional<Usuario> usuario =
+                buscarUsuarioAutenticado(authentication);
+
+        usuario.ifPresent(valor ->
+                auditoriaService.registrar(
+                        valor.getId(),
+                        valor.getEmail(),
+                        "LOGOUT",
+                        "Logout realizado com sucesso."
+                )
+        );
 
         if (request.getSession(false) != null) {
             request.getSession(false).invalidate();
@@ -248,4 +213,48 @@ public class AuthController {
         );
     }
 
+    private Optional<Usuario> buscarUsuarioAutenticado(
+            Authentication authentication) {
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return Optional.empty();
+        }
+
+        if (authentication instanceof OAuth2AuthenticationToken oauthToken) {
+            String registrationId =
+                    oauthToken.getAuthorizedClientRegistrationId();
+
+            OAuth2User oauth2User = oauthToken.getPrincipal();
+
+            if ("github".equalsIgnoreCase(registrationId)) {
+                Object idAttribute = oauth2User.getAttribute("id");
+
+                if (idAttribute == null) {
+                    return Optional.empty();
+                }
+
+                return usuarioRepository.findByProvedorAndProvedorId(
+                        ProvedorAutenticacao.GITHUB,
+                        idAttribute.toString()
+                );
+            }
+
+            if ("google".equalsIgnoreCase(registrationId)) {
+                Object subAttribute = oauth2User.getAttribute("sub");
+
+                if (subAttribute == null) {
+                    return Optional.empty();
+                }
+
+                return usuarioRepository.findByProvedorAndProvedorId(
+                        ProvedorAutenticacao.GOOGLE,
+                        subAttribute.toString()
+                );
+            }
+
+            return Optional.empty();
+        }
+
+        return usuarioRepository.findByEmail(authentication.getName());
+    }
 }

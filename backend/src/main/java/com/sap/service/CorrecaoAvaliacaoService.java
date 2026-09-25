@@ -7,9 +7,12 @@ import com.sap.model.AnaliseDesempenho;
 import com.sap.model.Avaliacao;
 import com.sap.model.Questao;
 import com.sap.model.Resultado;
+import com.sap.model.Usuario;
 import com.sap.repository.AvaliacaoRepository;
 import com.sap.repository.QuestaoRepository;
 import com.sap.repository.ResultadoRepository;
+import com.sap.repository.UsuarioRepository;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,18 +28,23 @@ public class CorrecaoAvaliacaoService {
     private final QuestaoRepository questaoRepository;
     private final ResultadoRepository resultadoRepository;
     private final AnaliseDesempenhoService analiseDesempenhoService;
+    private final UsuarioRepository usuarioRepository;
+    private final AuditoriaService auditoriaService;
 
     public CorrecaoAvaliacaoService(
-        AvaliacaoRepository avaliacaoRepository,
-        QuestaoRepository questaoRepository,
-        ResultadoRepository resultadoRepository,
-        AnaliseDesempenhoService analiseDesempenhoService) {
+            AvaliacaoRepository avaliacaoRepository,
+            QuestaoRepository questaoRepository,
+            ResultadoRepository resultadoRepository,
+            AnaliseDesempenhoService analiseDesempenhoService,
+            UsuarioRepository usuarioRepository,
+            AuditoriaService auditoriaService) {
 
         this.avaliacaoRepository = avaliacaoRepository;
         this.questaoRepository = questaoRepository;
         this.resultadoRepository = resultadoRepository;
         this.analiseDesempenhoService = analiseDesempenhoService;
-  
+        this.usuarioRepository = usuarioRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @Transactional
@@ -48,17 +56,30 @@ public class CorrecaoAvaliacaoService {
                 .orElseThrow(() ->
                         new RuntimeException("Avaliação não encontrada"));
 
+        Usuario usuario = usuarioRepository
+                .findById(request.getUsuarioId())
+                .orElseThrow(() ->
+                        new RuntimeException("Usuário não encontrado"));
+
         List<Questao> questoes =
                 questaoRepository.findByAvaliacao_Id(
                         request.getAvaliacaoId());
 
         int totalQuestoes = questoes.size();
+
+        if (totalQuestoes == 0) {
+            throw new RuntimeException(
+                    "A avaliação não possui questões cadastradas");
+        }
+
         int acertos = 0;
 
         for (RespostaQuestaoRequest resposta : request.getRespostas()) {
 
             Questao questao = questoes.stream()
-                    .filter(q -> q.getId().equals(resposta.getQuestaoId()))
+                    .filter(q ->
+                            q.getId().equals(
+                                    resposta.getQuestaoId()))
                     .findFirst()
                     .orElseThrow(() ->
                             new RuntimeException(
@@ -83,7 +104,7 @@ public class CorrecaoAvaliacaoService {
                 .setScale(2, RoundingMode.HALF_UP);
 
         Resultado resultado = new Resultado(
-                request.getUsuarioId(),
+                usuario.getId(),
                 avaliacao,
                 totalQuestoes,
                 acertos,
@@ -97,15 +118,24 @@ public class CorrecaoAvaliacaoService {
         AnaliseDesempenho analise =
                 analiseDesempenhoService.analisarResultado(resultado);
 
+        auditoriaService.registrar(
+                usuario.getId(),
+                usuario.getEmail(),
+                "FINALIZOU_AVALIACAO",
+                "Avaliação " + avaliacao.getId()
+                        + " finalizada. Resultado: "
+                        + percentual + "%."
+        );
+
         return new ResultadoAvaliacaoResponse(
-        resultado.getId(),
-        totalQuestoes,
-        acertos,
-        erros,
-        percentual,
-        analise.getDificuldade(),
-        analise.getPrioridade(),
-        analise.getRecomendacao()
+                resultado.getId(),
+                totalQuestoes,
+                acertos,
+                erros,
+                percentual,
+                analise.getDificuldade(),
+                analise.getPrioridade(),
+                analise.getRecomendacao()
         );
     }
 }
