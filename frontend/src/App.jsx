@@ -14,7 +14,12 @@ function App() {
   const [erro, setErro] = useState("");
 
   useEffect(() => {
-    fetch(`http://localhost:8080/api/questoes/avaliacao/${avaliacaoId}`)
+        fetch(
+          `http://localhost:8080/api/questoes/avaliacao/${avaliacaoId}`,
+          {
+            credentials: "include",
+          }
+        )
       .then((response) => {
         if (!response.ok) {
           throw new Error("Erro ao buscar questões");
@@ -66,6 +71,7 @@ function App() {
         "http://localhost:8080/api/avaliacoes/finalizar",
         {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
