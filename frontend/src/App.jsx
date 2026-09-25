@@ -1,52 +1,336 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import "./App.css";
 
+const API_URL = "http://localhost:8080";
+const AVALIACAO_ID = 1;
+
+function GoogleIcon() {
+  return (
+    <svg
+      className="oauth-icon"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        fill="#4285F4"
+        d="M21.35 12.22c0-.74-.07-1.45-.19-2.13H12v4.03h5.24a4.48 4.48 0 0 1-1.94 2.94v2.62h3.14c1.84-1.69 2.91-4.19 2.91-7.46Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 21.75c2.62 0 4.82-.87 6.43-2.36l-3.14-2.62c-.87.58-1.98.93-3.29.93-2.53 0-4.67-1.71-5.44-4.01H3.32v2.7A9.72 9.72 0 0 0 12 21.75Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M6.56 13.69A5.85 5.85 0 0 1 6.25 12c0-.59.1-1.16.31-1.69v-2.7H3.32A9.73 9.73 0 0 0 2.25 12c0 1.57.38 3.05 1.07 4.39l3.24-2.7Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 6.3c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.82 3.39 14.62 2.25 12 2.25a9.72 9.72 0 0 0-8.68 5.36l3.24 2.7C7.33 8.01 9.47 6.3 12 6.3Z"
+      />
+    </svg>
+  );
+}
+
+function GitHubIcon() {
+  return (
+    <svg
+      className="oauth-icon github-svg"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        fill="currentColor"
+        d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.56v-2.23c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.04 1.78 2.72 1.27 3.38.97.1-.75.41-1.27.74-1.56-2.57-.29-5.27-1.29-5.27-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.47.11-3.05 0 0 .97-.31 3.16 1.18A10.98 10.98 0 0 1 12 6.11c.98 0 1.94.13 2.85.38 2.2-1.49 3.16-1.18 3.16-1.18.63 1.58.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.71 5.39-5.29 5.68.42.36.79 1.07.79 2.16v3.26c0 .31.21.68.8.56A11.5 11.5 0 0 0 12 .7Z"
+      />
+    </svg>
+  );
+}
+
 function App() {
-  const avaliacaoId = 1;
-  const usuarioId = 1;
+  const [usuario, setUsuario] = useState(null);
+  const [verificandoSessao, setVerificandoSessao] = useState(true);
+
+  const [modoAuth, setModoAuth] = useState("login");
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+
+  const [aceitouTermos, setAceitouTermos] = useState(false);
+
+  const [erroAuth, setErroAuth] = useState("");
+  const [sucessoAuth, setSucessoAuth] = useState("");
+  const [processandoAuth, setProcessandoAuth] = useState(false);
+
+  const [modalLegal, setModalLegal] = useState(null);
 
   const [questoes, setQuestoes] = useState([]);
   const [respostas, setRespostas] = useState({});
   const [resultado, setResultado] = useState(null);
 
-  const [carregando, setCarregando] = useState(true);
+  const [carregando, setCarregando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
 
   useEffect(() => {
-        fetch(
-          `http://localhost:8080/api/questoes/avaliacao/${avaliacaoId}`,
-          {
-            credentials: "include",
-          }
-        )
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Erro ao buscar questões");
-        }
+    const parametros = new URLSearchParams(window.location.search);
+    const oauthError = parametros.get("oauthError");
 
-        return response.json();
-      })
-      .then((dados) => {
-        setQuestoes(dados);
-        setCarregando(false);
-      })
-      .catch((error) => {
-        console.error(error);
-        setErro("Não foi possível carregar a avaliação.");
-        setCarregando(false);
-      });
+    if (oauthError) {
+      setErroAuth(oauthError);
+
+      window.history.replaceState(
+        {},
+        document.title,
+        window.location.pathname
+      );
+    }
+
+    verificarSessao();
   }, []);
 
+  useEffect(() => {
+    if (usuario) {
+      carregarQuestoes();
+    } else {
+      setQuestoes([]);
+      setRespostas({});
+      setResultado(null);
+    }
+  }, [usuario]);
+
+  async function verificarSessao() {
+    try {
+      const response = await fetch(`${API_URL}/api/auth/me`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        setUsuario(null);
+        return;
+      }
+
+      const dados = await response.json();
+      setUsuario(dados);
+    } catch (error) {
+      console.error("Erro ao verificar sessão:", error);
+      setUsuario(null);
+    } finally {
+      setVerificandoSessao(false);
+    }
+  }
+
+  function limparMensagensAuth() {
+    setErroAuth("");
+    setSucessoAuth("");
+  }
+
+  function trocarModoAuth(modo) {
+    setModoAuth(modo);
+    limparMensagensAuth();
+    setSenha("");
+    setAceitouTermos(false);
+
+    if (modo === "login") {
+      setNome("");
+    }
+  }
+
+  async function fazerLogin(event) {
+    event.preventDefault();
+    limparMensagensAuth();
+
+    if (!email.trim() || !senha) {
+      setErroAuth("Preencha o e-mail e a senha.");
+      return;
+    }
+
+    try {
+      setProcessandoAuth(true);
+
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          senha,
+        }),
+      });
+
+      if (!response.ok) {
+        setErroAuth("E-mail ou senha inválidos.");
+        return;
+      }
+
+      const dados = await response.json();
+
+      setUsuario(dados);
+      setEmail("");
+      setSenha("");
+    } catch (error) {
+      console.error("Erro no login:", error);
+
+      setErroAuth(
+        "Não foi possível conectar ao servidor. Tente novamente."
+      );
+    } finally {
+      setProcessandoAuth(false);
+    }
+  }
+
+  async function fazerCadastro(event) {
+    event.preventDefault();
+    limparMensagensAuth();
+
+    if (!nome.trim() || !email.trim() || !senha) {
+      setErroAuth("Preencha todos os campos.");
+      return;
+    }
+
+    if (senha.length < 6) {
+      setErroAuth("A senha deve possuir pelo menos 6 caracteres.");
+      return;
+    }
+
+    if (!aceitouTermos) {
+      setErroAuth(
+        "Você precisa concordar com os Termos de Uso e a Política de Privacidade."
+      );
+      return;
+    }
+
+    try {
+      setProcessandoAuth(true);
+
+      const response = await fetch(`${API_URL}/api/auth/cadastro`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nome: nome.trim(),
+          email: email.trim(),
+          senha,
+          tipo: "ESTUDANTE",
+        }),
+      });
+
+      if (!response.ok) {
+        let mensagem = "Não foi possível criar a conta.";
+
+        try {
+          const dadosErro = await response.json();
+
+          mensagem =
+            dadosErro.mensagem ||
+            dadosErro.message ||
+            mensagem;
+        } catch {
+          
+        }
+
+        setErroAuth(mensagem);
+        return;
+      }
+
+      setModoAuth("login");
+      setNome("");
+      setSenha("");
+      setAceitouTermos(false);
+
+      setSucessoAuth(
+        "Conta criada com sucesso. Agora faça seu login."
+      );
+    } catch (error) {
+      console.error("Erro no cadastro:", error);
+
+      setErroAuth(
+        "Não foi possível conectar ao servidor. Tente novamente."
+      );
+    } finally {
+      setProcessandoAuth(false);
+    }
+  }
+
+  function entrarComGoogle() {
+    window.location.href =
+      `${API_URL}/oauth2/authorization/google`;
+  }
+
+  function entrarComGitHub() {
+    window.location.href =
+      `${API_URL}/oauth2/authorization/github`;
+  }
+
+  async function fazerLogout() {
+    try {
+      await fetch(`${API_URL}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Erro ao encerrar sessão:", error);
+    } finally {
+      setUsuario(null);
+      setQuestoes([]);
+      setRespostas({});
+      setResultado(null);
+      setErro("");
+      setErroAuth("");
+    }
+  }
+
+  async function carregarQuestoes() {
+    try {
+      setCarregando(true);
+      setErro("");
+
+      const response = await fetch(
+        `${API_URL}/api/questoes/avaliacao/${AVALIACAO_ID}`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
+
+      if (response.status === 401) {
+        setUsuario(null);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Erro ao buscar questões.");
+      }
+
+      const dados = await response.json();
+      setQuestoes(dados);
+    } catch (error) {
+      console.error(error);
+      setErro("Não foi possível carregar a avaliação.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
   function selecionarResposta(questaoId, alternativa) {
-    setRespostas((respostasAnteriores) => ({
-      ...respostasAnteriores,
+    setRespostas((anteriores) => ({
+      ...anteriores,
       [questaoId]: alternativa,
     }));
   }
 
   async function finalizarAvaliacao() {
     setErro("");
+
+    if (questoes.length === 0) {
+      setErro("Nenhuma questão disponível.");
+      return;
+    }
 
     if (Object.keys(respostas).length !== questoes.length) {
       setErro("Responda todas as questões antes de finalizar.");
@@ -58,34 +342,41 @@ function App() {
       resposta: respostas[questao.id],
     }));
 
-    const dadosEnvio = {
-      usuarioId: usuarioId,
-      avaliacaoId: avaliacaoId,
-      respostas: respostasFormatadas,
-    };
-
     try {
       setEnviando(true);
 
       const response = await fetch(
-        "http://localhost:8080/api/avaliacoes/finalizar",
+        `${API_URL}/api/avaliacoes/finalizar`,
         {
           method: "POST",
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(dadosEnvio),
+          body: JSON.stringify({
+            usuarioId: usuario.id,
+            avaliacaoId: AVALIACAO_ID,
+            respostas: respostasFormatadas,
+          }),
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Erro ao finalizar avaliação");
+      if (response.status === 401) {
+        setUsuario(null);
+        return;
       }
 
-      const dadosResultado = await response.json();
+      if (!response.ok) {
+        throw new Error("Erro ao finalizar avaliação.");
+      }
 
-      setResultado(dadosResultado);
+      const dados = await response.json();
+      setResultado(dados);
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     } catch (error) {
       console.error(error);
       setErro("Não foi possível finalizar a avaliação.");
@@ -94,170 +385,741 @@ function App() {
     }
   }
 
+  function renderModalLegal() {
+    if (!modalLegal) {
+      return null;
+    }
+
+    const termos = modalLegal === "termos";
+
+    return (
+      <div
+        className="modal-overlay"
+        onMouseDown={() => setModalLegal(null)}
+      >
+        <section
+          className="modal-legal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="titulo-modal"
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          <button
+            className="modal-fechar"
+            type="button"
+            aria-label="Fechar"
+            onClick={() => setModalLegal(null)}
+          >
+            ×
+          </button>
+
+          <span className="modal-etiqueta">SAP</span>
+
+          <h2 id="titulo-modal">
+            {termos
+              ? "Termos de Uso"
+              : "Política de Privacidade"}
+          </h2>
+
+          {termos ? (
+            <div className="texto-legal">
+              <p>
+                Estes Termos de Uso estabelecem as condições para
+                utilização do Sistema de Acompanhamento e
+                Personalização da Aprendizagem (SAP).
+              </p>
+
+              <h3>1. Finalidade</h3>
+
+              <p>
+                O SAP é uma aplicação educacional destinada ao
+                acompanhamento de avaliações, desempenho e
+                recomendações de estudo.
+              </p>
+
+              <h3>2. Conta de acesso</h3>
+
+              <p>
+                O usuário é responsável pelas informações fornecidas
+                no cadastro e pela utilização adequada de sua conta.
+              </p>
+
+              <h3>3. Uso da plataforma</h3>
+
+              <p>
+                A plataforma deve ser utilizada para finalidades
+                educacionais e de acordo com as regras da instituição
+                responsável por sua disponibilização.
+              </p>
+
+              <h3>4. Resultados educacionais</h3>
+
+              <p>
+                As análises e recomendações apresentadas pelo sistema
+                servem como apoio ao processo de aprendizagem e devem
+                ser interpretadas dentro do contexto educacional.
+              </p>
+            </div>
+          ) : (
+            <div className="texto-legal">
+              <p>
+                Esta Política de Privacidade descreve como os dados
+                utilizados pelo SAP são tratados no contexto da
+                aplicação.
+              </p>
+
+              <h3>1. Dados da conta</h3>
+
+              <p>
+                O sistema pode utilizar informações necessárias à
+                autenticação, como nome, e-mail, provedor de acesso e
+                identificador interno do usuário.
+              </p>
+
+              <h3>2. Dados educacionais</h3>
+
+              <p>
+                Respostas de avaliações, resultados e informações de
+                desempenho podem ser processados para oferecer
+                acompanhamento e recomendações de estudo.
+              </p>
+
+              <h3>3. Login externo</h3>
+
+              <p>
+                Quando Google ou GitHub forem utilizados para
+                autenticação, o processo também estará sujeito às
+                políticas aplicáveis desses provedores.
+              </p>
+
+              <h3>4. Segurança</h3>
+
+              <p>
+                Credenciais sensíveis dos provedores de autenticação
+                não são armazenadas no código do frontend.
+              </p>
+            </div>
+          )}
+        </section>
+      </div>
+    );
+  }
+
+  if (verificandoSessao) {
+    return (
+      <div className="tela-carregamento">
+        <div className="logo-marca logo-carregamento">
+          SAP
+        </div>
+
+        <div className="spinner" />
+
+        <p>Preparando seu ambiente de aprendizagem...</p>
+      </div>
+    );
+  }
+
+  if (!usuario) {
+    const cadastro = modoAuth === "cadastro";
+
+    return (
+      <div className="auth-page">
+        <section className="auth-brand">
+          <div className="brand-conteudo">
+            <div className="logo-marca logo-claro">
+              SAP
+            </div>
+
+            <span className="brand-badge">
+              Aprendizagem personalizada
+            </span>
+
+            <h1>
+              Aprenda melhor.
+              <br />
+              Evolua no seu ritmo.
+            </h1>
+
+            <p>
+              Acompanhe seu desempenho, identifique pontos de melhoria
+              e receba recomendações para direcionar seus estudos.
+            </p>
+
+            <div className="brand-destaques">
+              <div>
+                <strong>01</strong>
+                <span>Avaliações direcionadas</span>
+              </div>
+
+              <div>
+                <strong>02</strong>
+                <span>Análise de desempenho</span>
+              </div>
+
+              <div>
+                <strong>03</strong>
+                <span>Recomendações de estudo</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="brand-decoracao brand-decoracao-1" />
+          <div className="brand-decoracao brand-decoracao-2" />
+        </section>
+
+        <section className="auth-area">
+          <div className="auth-card">
+            <div className="auth-mobile-logo">
+              SAP
+            </div>
+
+            <div className="auth-cabecalho">
+              <span className="auth-etiqueta">
+                {cadastro
+                  ? "Comece agora"
+                  : "Bem-vindo de volta"}
+              </span>
+
+              <h2>
+                {cadastro
+                  ? "Crie sua conta"
+                  : "Acesse sua conta"}
+              </h2>
+
+              <p>
+                {cadastro
+                  ? "Cadastre-se para iniciar sua jornada no SAP."
+                  : "Entre para continuar acompanhando sua aprendizagem."}
+              </p>
+            </div>
+
+            <div className="auth-tabs">
+              <button
+                type="button"
+                className={modoAuth === "login" ? "ativo" : ""}
+                onClick={() => trocarModoAuth("login")}
+              >
+                Entrar
+              </button>
+
+              <button
+                type="button"
+                className={cadastro ? "ativo" : ""}
+                onClick={() => trocarModoAuth("cadastro")}
+              >
+                Criar conta
+              </button>
+            </div>
+
+            <form
+              className="auth-form"
+              onSubmit={cadastro ? fazerCadastro : fazerLogin}
+            >
+              {cadastro && (
+                <div className="campo">
+                  <label htmlFor="nome">
+                    Nome
+                  </label>
+
+                  <input
+                    id="nome"
+                    type="text"
+                    autoComplete="name"
+                    placeholder="Como podemos chamar você?"
+                    value={nome}
+                    onChange={(event) =>
+                      setNome(event.target.value)
+                    }
+                  />
+                </div>
+              )}
+
+              <div className="campo">
+                <label htmlFor="email">
+                  E-mail
+                </label>
+
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="seuemail@exemplo.com"
+                  value={email}
+                  onChange={(event) =>
+                    setEmail(event.target.value)
+                  }
+                />
+              </div>
+
+              <div className="campo">
+                <label htmlFor="senha">
+                  Senha
+                </label>
+
+                <div className="campo-senha">
+                  <input
+                    id="senha"
+                    type={mostrarSenha ? "text" : "password"}
+                    autoComplete={
+                      cadastro
+                        ? "new-password"
+                        : "current-password"
+                    }
+                    placeholder={
+                      cadastro
+                        ? "Crie uma senha segura"
+                        : "Digite sua senha"
+                    }
+                    value={senha}
+                    onChange={(event) =>
+                      setSenha(event.target.value)
+                    }
+                  />
+
+                  <button
+                    type="button"
+                    className="mostrar-senha"
+                    onClick={() =>
+                      setMostrarSenha((anterior) => !anterior)
+                    }
+                  >
+                    {mostrarSenha ? "Ocultar" : "Mostrar"}
+                  </button>
+                </div>
+              </div>
+
+              {cadastro && (
+                <label className="aceite-termos">
+                  <input
+                    type="checkbox"
+                    checked={aceitouTermos}
+                    onChange={(event) =>
+                      setAceitouTermos(event.target.checked)
+                    }
+                  />
+
+                  <span>
+                    Li e concordo com os{" "}
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        setModalLegal("termos");
+                      }}
+                    >
+                      Termos de Uso
+                    </button>{" "}
+                    e a{" "}
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        setModalLegal("privacidade");
+                      }}
+                    >
+                      Política de Privacidade
+                    </button>
+                    .
+                  </span>
+                </label>
+              )}
+
+              {erroAuth && (
+                <div className="mensagem mensagem-erro">
+                  {erroAuth}
+                </div>
+              )}
+
+              {sucessoAuth && (
+                <div className="mensagem mensagem-sucesso">
+                  {sucessoAuth}
+                </div>
+              )}
+
+              <button
+                className="botao-principal"
+                type="submit"
+                disabled={
+                  processandoAuth ||
+                  (cadastro && !aceitouTermos)
+                }
+              >
+                {processandoAuth
+                  ? "Aguarde..."
+                  : cadastro
+                    ? "Criar minha conta"
+                    : "Entrar no SAP"}
+              </button>
+            </form>
+
+            <div className="separador">
+              <span>ou continue com</span>
+            </div>
+
+            <div className="oauth-grid">
+              <button
+                className="botao-oauth"
+                type="button"
+                onClick={entrarComGoogle}
+              >
+                <GoogleIcon />
+                <span>Google</span>
+              </button>
+
+              <button
+                className="botao-oauth"
+                type="button"
+                onClick={entrarComGitHub}
+              >
+                <GitHubIcon />
+                <span>GitHub</span>
+              </button>
+            </div>
+
+            <p className="auth-alternativa">
+              {cadastro
+                ? "Já possui uma conta?"
+                : "Ainda não possui uma conta?"}{" "}
+
+              <button
+                type="button"
+                onClick={() =>
+                  trocarModoAuth(cadastro ? "login" : "cadastro")
+                }
+              >
+                {cadastro ? "Entrar" : "Cadastre-se"}
+              </button>
+            </p>
+
+            {!cadastro && (
+              <p className="legal-resumo">
+                Consulte nossos{" "}
+                <button
+                  type="button"
+                  onClick={() => setModalLegal("termos")}
+                >
+                  Termos de Uso
+                </button>{" "}
+                e nossa{" "}
+                <button
+                  type="button"
+                  onClick={() => setModalLegal("privacidade")}
+                >
+                  Política de Privacidade
+                </button>
+                .
+              </p>
+            )}
+          </div>
+
+          <p className="auth-rodape">
+            SAP · Sistema de Acompanhamento e Personalização da
+            Aprendizagem
+          </p>
+        </section>
+
+        {renderModalLegal()}
+      </div>
+    );
+  }
+
   if (carregando) {
     return (
-      <div className="container">
-        <p>Carregando avaliação...</p>
+      <div className="tela-carregamento">
+        <div className="logo-marca logo-carregamento">
+          SAP
+        </div>
+
+        <div className="spinner" />
+
+        <p>Carregando sua avaliação...</p>
       </div>
     );
   }
 
   if (resultado) {
     return (
-      <div className="container">
-        <header>
-          <h1>SAP</h1>
-          <p>
-            Sistema de Acompanhamento e Personalização da Aprendizagem
-          </p>
+      <div className="app-page">
+        <header className="topbar">
+          <div className="topbar-conteudo">
+            <div>
+              <div className="logo-marca logo-topbar">
+                SAP
+              </div>
+
+              <span className="topbar-subtitulo">
+                Aprendizagem personalizada
+              </span>
+            </div>
+
+            <div className="usuario-menu">
+              <div className="avatar">
+                {usuario.nome?.charAt(0)?.toUpperCase() || "U"}
+              </div>
+
+              <div className="usuario-info">
+                <strong>{usuario.nome}</strong>
+                <span>{usuario.email}</span>
+              </div>
+
+              <button
+                className="botao-sair"
+                type="button"
+                onClick={fazerLogout}
+              >
+                Sair
+              </button>
+            </div>
+          </div>
         </header>
 
-        <main className="resultado">
-          <h2>Resultado da avaliação</h2>
+        <main className="conteudo-app">
+          <section className="resultado-card">
+            <span className="secao-etiqueta">
+              Avaliação concluída
+            </span>
 
-          <div className="percentual">
-            {resultado.percentual}%
-          </div>
+            <h1>Seu resultado</h1>
 
-          <p>
-            Total de questões:{" "}
-            <strong>{resultado.totalQuestoes}</strong>
-          </p>
-
-          <p>
-            Acertos: <strong>{resultado.acertos}</strong>
-          </p>
-
-          <p>
-            Erros: <strong>{resultado.erros}</strong>
-          </p>
-
-          <div className="analise-desempenho">
-            <h3>Análise de desempenho</h3>
-
-            <p>
-              Nível de dificuldade:{" "}
-              <strong>{resultado.dificuldade}</strong>
+            <p className="resultado-intro">
+              Confira seu desempenho e use a recomendação para
+              direcionar seus próximos estudos.
             </p>
 
-            <p>
-              Prioridade de estudo:{" "}
-              <strong>{resultado.prioridade}</strong>
-            </p>
+            <div className="resultado-grid">
+              <div className="resultado-percentual">
+                <span>Desempenho</span>
+                <strong>
+                  {resultado.percentual}%
+                </strong>
+              </div>
 
-            <p>
-              Recomendação:
-            </p>
+              <div className="resultado-metrica">
+                <span>Questões</span>
+                <strong>
+                  {resultado.totalQuestoes}
+                </strong>
+              </div>
 
-            <p>
-              {resultado.recomendacao}
-            </p>
-          </div>
+              <div className="resultado-metrica">
+                <span>Acertos</span>
+                <strong>
+                  {resultado.acertos}
+                </strong>
+              </div>
 
+              <div className="resultado-metrica">
+                <span>Erros</span>
+                <strong>
+                  {resultado.erros}
+                </strong>
+              </div>
+            </div>
 
-          <button
-            onClick={() => {
-              setResultado(null);
-              setRespostas({});
-            }}
-          >
-            Refazer avaliação
-          </button>
+            <div className="recomendacao-card">
+              <div>
+                <span className="secao-etiqueta">
+                  Análise personalizada
+                </span>
+
+                <h2>
+                  Recomendação de estudo
+                </h2>
+              </div>
+
+              <div className="analise-tags">
+                <span>
+                  Dificuldade:{" "}
+                  <strong>
+                    {resultado.dificuldade}
+                  </strong>
+                </span>
+
+                <span>
+                  Prioridade:{" "}
+                  <strong>
+                    {resultado.prioridade}
+                  </strong>
+                </span>
+              </div>
+
+              <p>
+                {resultado.recomendacao}
+              </p>
+            </div>
+
+            <button
+              className="botao-principal botao-refazer"
+              type="button"
+              onClick={() => {
+                setResultado(null);
+                setRespostas({});
+                setErro("");
+              }}
+            >
+              Refazer avaliação
+            </button>
+          </section>
         </main>
       </div>
     );
   }
 
   return (
-    <div className="container">
-      <header>
-        <h1>SAP</h1>
+    <div className="app-page">
+      <header className="topbar">
+        <div className="topbar-conteudo">
+          <div>
+            <div className="logo-marca logo-topbar">
+              SAP
+            </div>
 
-        <p>
-          Sistema de Acompanhamento e Personalização da Aprendizagem
-        </p>
+            <span className="topbar-subtitulo">
+              Aprendizagem personalizada
+            </span>
+          </div>
+
+          <div className="usuario-menu">
+            <div className="avatar">
+              {usuario.nome?.charAt(0)?.toUpperCase() || "U"}
+            </div>
+
+            <div className="usuario-info">
+              <strong>
+                {usuario.nome}
+              </strong>
+
+              <span>
+                {usuario.email}
+              </span>
+            </div>
+
+            <button
+              className="botao-sair"
+              type="button"
+              onClick={fazerLogout}
+            >
+              Sair
+            </button>
+          </div>
+        </div>
       </header>
 
-      <main className="avaliacao">
-        <h2>Avaliação de SQL</h2>
+      <main className="conteudo-app">
+        <section className="avaliacao-cabecalho">
+          <div>
+            <span className="secao-etiqueta">
+              Banco de Dados · SQL
+            </span>
 
-        <p className="subtitulo">
-          Responda às questões abaixo e finalize a avaliação.
-        </p>
+            <h1>Avaliação de SQL</h1>
 
-        {questoes.map((questao, index) => (
-          <div className="questao" key={questao.id}>
-            <h3>Questão {index + 1}</h3>
-
-            <p className="enunciado">
-              {questao.enunciado}
+            <p>
+              Responda às questões abaixo. Todas as questões precisam
+              ser respondidas antes da finalização.
             </p>
-
-            <label>
-              <input
-                type="radio"
-                name={`questao-${questao.id}`}
-                value="A"
-                checked={respostas[questao.id] === "A"}
-                onChange={() =>
-                  selecionarResposta(questao.id, "A")
-                }
-              />
-              A) {questao.alternativaA}
-            </label>
-
-            <label>
-              <input
-                type="radio"
-                name={`questao-${questao.id}`}
-                value="B"
-                checked={respostas[questao.id] === "B"}
-                onChange={() =>
-                  selecionarResposta(questao.id, "B")
-                }
-              />
-              B) {questao.alternativaB}
-            </label>
-
-            <label>
-              <input
-                type="radio"
-                name={`questao-${questao.id}`}
-                value="C"
-                checked={respostas[questao.id] === "C"}
-                onChange={() =>
-                  selecionarResposta(questao.id, "C")
-                }
-              />
-              C) {questao.alternativaC}
-            </label>
-
-            <label>
-              <input
-                type="radio"
-                name={`questao-${questao.id}`}
-                value="D"
-                checked={respostas[questao.id] === "D"}
-                onChange={() =>
-                  selecionarResposta(questao.id, "D")
-                }
-              />
-              D) {questao.alternativaD}
-            </label>
           </div>
-        ))}
 
-        {erro && <p className="erro">{erro}</p>}
+          <div className="progresso-resumo">
+            <strong>
+              {Object.keys(respostas).length}/{questoes.length}
+            </strong>
 
-        <button
-          onClick={finalizarAvaliacao}
-          disabled={enviando}
-        >
-          {enviando
-            ? "Finalizando..."
-            : "Finalizar avaliação"}
-        </button>
+            <span>respondidas</span>
+          </div>
+        </section>
+
+        <section className="lista-questoes">
+          {questoes.map((questao, index) => (
+            <article
+              className="questao-card"
+              key={questao.id}
+            >
+              <div className="questao-numero">
+                Questão{" "}
+                {String(index + 1).padStart(2, "0")}
+              </div>
+
+              <h2>
+                {questao.enunciado}
+              </h2>
+
+              <div className="alternativas">
+                {[
+                  ["A", questao.alternativaA],
+                  ["B", questao.alternativaB],
+                  ["C", questao.alternativaC],
+                  ["D", questao.alternativaD],
+                ].map(([letra, texto]) => {
+                  const selecionada =
+                    respostas[questao.id] === letra;
+
+                  return (
+                    <label
+                      className={`alternativa ${
+                        selecionada ? "selecionada" : ""
+                      }`}
+                      key={letra}
+                    >
+                      <input
+                        type="radio"
+                        name={`questao-${questao.id}`}
+                        value={letra}
+                        checked={selecionada}
+                        onChange={() =>
+                          selecionarResposta(
+                            questao.id,
+                            letra
+                          )
+                        }
+                      />
+
+                      <span className="alternativa-letra">
+                        {letra}
+                      </span>
+
+                      <span>
+                        {texto}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </article>
+          ))}
+        </section>
+
+        {erro && (
+          <div className="mensagem mensagem-erro erro-avaliacao">
+            {erro}
+          </div>
+        )}
+
+        <div className="avaliacao-acoes">
+          <div>
+            <strong>
+              {Object.keys(respostas).length} de {questoes.length}
+            </strong>{" "}
+            questões respondidas
+          </div>
+
+          <button
+            className="botao-principal"
+            type="button"
+            onClick={finalizarAvaliacao}
+            disabled={
+              enviando ||
+              questoes.length === 0
+            }
+          >
+            {enviando
+              ? "Finalizando..."
+              : "Finalizar avaliação"}
+          </button>
+        </div>
       </main>
+
+      {renderModalLegal()}
     </div>
   );
 }
