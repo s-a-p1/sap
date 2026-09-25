@@ -996,13 +996,29 @@ function App() {
                 <span>{usuario.email}</span>
               </div>
 
-              <button
-                className="botao-sair"
-                type="button"
-                onClick={fazerLogout}
-              >
-                Sair
-              </button>
+              <div className="links-legais-logado">
+  <button
+    type="button"
+    onClick={() => setModalLegal("termos")}
+  >
+    Termos
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setModalLegal("privacidade")}
+  >
+    Privacidade
+  </button>
+
+  <button
+    className="botao-sair"
+    type="button"
+    onClick={fazerLogout}
+  >
+    Sair
+  </button>
+</div>
             </div>
           </div>
         </header>
@@ -1092,8 +1108,10 @@ function App() {
                 avaliações são restritas aos estudantes.
               </p>
             </div>
-          </section>
+                    </section>
         </main>
+
+        {renderModalLegal()}
       </div>
     );
   }
@@ -1113,41 +1131,56 @@ function App() {
   }
 
   if (resultado) {
-    return (
-      <div className="app-page">
-        <header className="topbar">
-          <div className="topbar-conteudo">
-            <div>
-              <div className="logo-marca logo-topbar">
-                SAP
-              </div>
+  return (
+    <div className="app-page">
+      <header className="topbar">
+  <div className="topbar-conteudo">
+    <div>
+      <div className="logo-marca logo-topbar">
+        SAP
+      </div>
 
-              <span className="topbar-subtitulo">
-                Aprendizagem personalizada
-              </span>
-            </div>
+      <span className="topbar-subtitulo">
+        Aprendizagem personalizada
+      </span>
+    </div>
 
-            <div className="usuario-menu">
-              <div className="avatar">
-                {usuario.nome?.charAt(0)?.toUpperCase() || "U"}
-              </div>
+    <div className="usuario-menu">
+      <div className="avatar">
+        {usuario.nome?.charAt(0)?.toUpperCase() || "U"}
+      </div>
 
-              <div className="usuario-info">
-                <strong>{usuario.nome}</strong>
-                <span>{usuario.email}</span>
-              </div>
+      <div className="usuario-info">
+        <strong>{usuario.nome}</strong>
+        <span>{usuario.email}</span>
+      </div>
 
-              <button
-                className="botao-sair"
-                type="button"
-                onClick={fazerLogout}
-              >
-                Sair
-              </button>
-            </div>
-          </div>
-        </header>
+      <div className="links-legais-logado">
+        <button
+          type="button"
+          onClick={() => setModalLegal("termos")}
+        >
+          Termos
+        </button>
 
+        <button
+          type="button"
+          onClick={() => setModalLegal("privacidade")}
+        >
+          Privacidade
+        </button>
+
+        <button
+          className="botao-sair"
+          type="button"
+          onClick={fazerLogout}
+        >
+          Sair
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
         <main className="conteudo-app">
           <section className="resultado-card">
             <span className="secao-etiqueta">
@@ -1234,8 +1267,10 @@ function App() {
             >
               Refazer avaliação
             </button>
-          </section>
+                    </section>
         </main>
+
+        {renderModalLegal()}
       </div>
     );
   }
@@ -1269,13 +1304,29 @@ function App() {
               </span>
             </div>
 
-            <button
-              className="botao-sair"
-              type="button"
-              onClick={fazerLogout}
-            >
-              Sair
-            </button>
+            <div className="links-legais-logado">
+  <button
+    type="button"
+    onClick={() => setModalLegal("termos")}
+  >
+    Termos
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setModalLegal("privacidade")}
+  >
+    Privacidade
+  </button>
+
+  <button
+    className="botao-sair"
+    type="button"
+    onClick={fazerLogout}
+  >
+    Sair
+  </button>
+</div>
           </div>
         </div>
       </header>
