@@ -2,6 +2,8 @@ package com.sap.model;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "usuarios")
 public class Usuario {
@@ -31,6 +33,15 @@ public class Usuario {
 
     @Column(nullable = false)
     private boolean ativo = true;
+
+    @Column(name = "aceitou_termos", nullable = false)
+    private boolean aceitouTermos = false;
+
+    @Column(name = "data_aceite_termos")
+    private LocalDateTime dataAceiteTermos;
+
+    @Column(name = "versao_termos", length = 20)
+    private String versaoTermos;
 
     public Usuario() {
     }
@@ -104,5 +115,29 @@ public class Usuario {
 
     public void setAtivo(boolean ativo) {
         this.ativo = ativo;
+    }
+
+    public boolean isAceitouTermos() {
+        return aceitouTermos;
+    }
+
+    public void setAceitouTermos(boolean aceitouTermos) {
+        this.aceitouTermos = aceitouTermos;
+    }
+
+    public LocalDateTime getDataAceiteTermos() {
+        return dataAceiteTermos;
+    }
+
+    public void setDataAceiteTermos(LocalDateTime dataAceiteTermos) {
+        this.dataAceiteTermos = dataAceiteTermos;
+    }
+
+    public String getVersaoTermos() {
+        return versaoTermos;
+    }
+
+    public void setVersaoTermos(String versaoTermos) {
+        this.versaoTermos = versaoTermos;
     }
 }

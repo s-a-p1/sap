@@ -2,7 +2,6 @@
 import "./App.css";
 
 const API_URL = "http://localhost:8080";
-const AVALIACAO_ID = 1;
 
 function GoogleIcon() {
   return (
@@ -64,7 +63,8 @@ function App() {
 
   const [modalLegal, setModalLegal] = useState(null);
 
-    const [questoes, setQuestoes] = useState([]);
+  const [avaliacaoId, setAvaliacaoId] = useState(null);
+  const [questoes, setQuestoes] = useState([]);
   const [respostas, setRespostas] = useState({});
   const [resultado, setResultado] = useState(null);
 
@@ -95,18 +95,71 @@ function App() {
   }, []);
 
     useEffect(() => {
-    if (usuario?.tipo === "ESTUDANTE") {
-      carregarQuestoes();
+  if (
+    usuario?.tipo === "ESTUDANTE" &&
+    usuario?.aceitouTermos === true
+  ) {
+    carregarQuestoes();
+    return;
+  }
+
+  setQuestoes([]);
+  setRespostas({});
+  setResultado(null);
+  setErro("");
+  setCarregando(false);
+}, [usuario]);
+
+  async function aceitarTermosOAuth() {
+  try {
+    setProcessandoAuth(true);
+    setErroAuth("");
+
+    const response = await fetch(
+      `${API_URL}/api/auth/aceitar-termos`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          aceitouTermos: true,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      let mensagem =
+        "Não foi possível registrar o aceite dos termos.";
+
+      try {
+        const dadosErro = await response.json();
+
+        mensagem =
+          dadosErro.erro ||
+          dadosErro.mensagem ||
+          dadosErro.message ||
+          mensagem;
+      } catch {
+      }
+
+      setErroAuth(mensagem);
       return;
     }
 
-    setQuestoes([]);
-    setRespostas({});
-    setResultado(null);
-    setErro("");
-    setCarregando(false);
-  }, [usuario]);
+    await verificarSessao();
+    setAceitouTermos(false);
+  } catch (error) {
+    console.error("Erro ao aceitar termos:", error);
 
+    setErroAuth(
+      "Não foi possível registrar o aceite. Tente novamente."
+    );
+  } finally {
+    setProcessandoAuth(false);
+  }
+}
   async function verificarSessao() {
     try {
       const response = await fetch(`${API_URL}/api/auth/me`, {
@@ -225,6 +278,7 @@ function App() {
           email: email.trim(),
           senha,
           tipo: "ESTUDANTE",
+          aceitouTermos,
         }),
       });
 
@@ -297,9 +351,35 @@ function App() {
     try {
       setCarregando(true);
       setErro("");
+      
+      const avaliacoesResponse = await fetch(
+  `${API_URL}/api/avaliacoes`,
+  {
+    method: "GET",
+    credentials: "include",
+  }
+);
+
+if (avaliacoesResponse.status === 401) {
+  setUsuario(null);
+  return;
+}
+
+if (!avaliacoesResponse.ok) {
+  throw new Error("Erro ao buscar avaliações.");
+}
+
+const avaliacoes = await avaliacoesResponse.json();
+
+if (avaliacoes.length === 0) {
+  throw new Error("Nenhuma avaliação disponível.");
+}
+
+const idAvaliacao = avaliacoes[0].id;
+setAvaliacaoId(idAvaliacao);
 
       const response = await fetch(
-        `${API_URL}/api/questoes/avaliacao/${AVALIACAO_ID}`,
+        `${API_URL}/api/questoes/avaliacao/${idAvaliacao}`,
         {
           method: "GET",
           credentials: "include",
@@ -417,7 +497,7 @@ function App() {
           },
           body: JSON.stringify({
             usuarioId: usuario.id,
-            avaliacaoId: AVALIACAO_ID,
+            avaliacaoId: avaliacaoId,
             respostas: respostasFormatadas,
           }),
         }
@@ -667,6 +747,76 @@ function App() {
     );
   }
 
+ if (usuario && usuario.aceitouTermos === false) {
+  return (
+    <div className="auth-page">
+      <section className="auth-area">
+        <div className="auth-card">
+          <div className="auth-cabecalho">
+            <span className="auth-etiqueta">
+              Primeiro acesso
+            </span>
+
+            <h2>Termos de Uso e Privacidade</h2>
+
+            <p>
+              Para continuar utilizando o SAP, você precisa ler e
+              concordar com os Termos de Uso e a Política de Privacidade.
+            </p>
+          </div>
+
+          <label className="aceite-termos">
+            <input
+              type="checkbox"
+              checked={aceitouTermos}
+              onChange={(event) =>
+                setAceitouTermos(event.target.checked)
+              }
+            />
+
+            <span>
+              Li e concordo com os{" "}
+              <button
+                type="button"
+                onClick={() => setModalLegal("termos")}
+              >
+                Termos de Uso
+              </button>{" "}
+              e a{" "}
+              <button
+                type="button"
+                onClick={() => setModalLegal("privacidade")}
+              >
+                Política de Privacidade
+              </button>
+              .
+            </span>
+          </label>
+
+          {erroAuth && (
+            <div className="mensagem mensagem-erro">
+              {erroAuth}
+            </div>
+          )}
+
+          <button
+            className="botao-principal"
+            type="button"
+            disabled={!aceitouTermos || processandoAuth}
+            onClick={aceitarTermosOAuth}
+          >
+            {processandoAuth
+              ? "Aguarde..."
+              : "Aceitar e continuar"}
+          </button>
+        </div>
+      </section>
+
+      {renderModalLegal()}
+    </div>
+  );
+}
+ 
   if (!usuario) {
     const cadastro = modoAuth === "cadastro";
 

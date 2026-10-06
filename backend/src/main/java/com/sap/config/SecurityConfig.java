@@ -6,15 +6,14 @@ import com.sap.service.GoogleOAuth2UserService;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import org.springframework.http.HttpMethod;
-
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.net.URLEncoder;
@@ -72,20 +71,50 @@ public class SecurityConfig {
                         .failureHandler((request, response, exception) -> {
 
                             String mensagem =
-                                    "Não foi possível realizar o login. "
-                                    + "Este e-mail já está vinculado a outra forma de login.";
+                                    "Não foi possível realizar o login.";
 
-                            String detalhe = exception.getMessage();
+                            String codigoErro = null;
 
-                            if (detalhe != null) {
+                            if (exception
+                                    instanceof OAuth2AuthenticationException oauthException) {
 
-                                if (detalhe.contains(
-                                        "Não foi possível obter um e-mail válido"
-                                )) {
+                                codigoErro =
+                                        oauthException
+                                                .getError()
+                                                .getErrorCode();
+                            }
 
-                                    mensagem =
-                                            "Não foi possível realizar o login. "
-                                            + "Não foi possível obter um e-mail válido da sua conta.";
+                            if ("usuario_inativo".equals(codigoErro)) {
+
+                                mensagem =
+                                        "Esta conta está inativa. Entre em contato com o suporte.";
+
+                            } else {
+
+                                String detalhe =
+                                        exception.getMessage();
+
+                                if (detalhe != null) {
+
+                                    String detalheNormalizado =
+                                            detalhe.toLowerCase();
+
+                                    if (detalheNormalizado.contains(
+                                            "já existe uma conta cadastrada com este e-mail"
+                                    )) {
+
+                                        mensagem =
+                                                "Não foi possível realizar o login. "
+                                                + "Este e-mail já está vinculado a outra forma de login.";
+
+                                    } else if (detalheNormalizado.contains(
+                                            "não foi possível obter um e-mail válido"
+                                    )) {
+
+                                        mensagem =
+                                                "Não foi possível realizar o login. "
+                                                + "Não foi possível obter um e-mail válido da sua conta.";
+                                    }
                                 }
                             }
 

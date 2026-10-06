@@ -1,5 +1,6 @@
 package com.sap.dto;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -14,8 +15,16 @@ public class CadastroUsuarioRequest {
     private String email;
 
     @NotBlank(message = "A senha é obrigatória.")
-    @Size(min = 6, message = "A senha deve possuir pelo menos 6 caracteres.")
+    @Size(
+            min = 6,
+            message = "A senha deve possuir pelo menos 6 caracteres."
+    )
     private String senha;
+
+    @AssertTrue(
+            message = "É necessário aceitar os Termos de Uso e a Política de Privacidade."
+    )
+    private boolean aceitouTermos;
 
     public CadastroUsuarioRequest() {
     }
@@ -42,5 +51,13 @@ public class CadastroUsuarioRequest {
 
     public void setSenha(String senha) {
         this.senha = senha;
+    }
+
+    public boolean isAceitouTermos() {
+        return aceitouTermos;
+    }
+
+    public void setAceitouTermos(boolean aceitouTermos) {
+        this.aceitouTermos = aceitouTermos;
     }
 }

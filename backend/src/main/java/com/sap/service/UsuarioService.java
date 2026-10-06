@@ -8,8 +8,12 @@ import com.sap.repository.UsuarioRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+
 @Service
 public class UsuarioService {
+
+    private static final String VERSAO_ATUAL_TERMOS = "1.0";
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
@@ -33,6 +37,12 @@ public class UsuarioService {
             );
         }
 
+        if (!request.isAceitouTermos()) {
+            throw new IllegalArgumentException(
+                    "É necessário aceitar os Termos de Uso e a Política de Privacidade."
+            );
+        }
+
         String senhaCriptografada =
                 passwordEncoder.encode(request.getSenha());
 
@@ -46,6 +56,10 @@ public class UsuarioService {
         usuario.setProvedor(ProvedorAutenticacao.LOCAL);
         usuario.setProvedorId(null);
         usuario.setAtivo(true);
+
+        usuario.setAceitouTermos(true);
+        usuario.setDataAceiteTermos(LocalDateTime.now());
+        usuario.setVersaoTermos(VERSAO_ATUAL_TERMOS);
 
         return usuarioRepository.save(usuario);
     }

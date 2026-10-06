@@ -13,6 +13,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
@@ -57,6 +58,7 @@ public class GitHubOAuth2UserService extends DefaultOAuth2UserService {
 
         if (provedorId == null || provedorId.isBlank()) {
             throw new OAuth2AuthenticationException(
+                    new OAuth2Error("github_id_ausente"),
                     "GitHub não retornou o identificador do usuário."
             );
         }
@@ -71,6 +73,7 @@ public class GitHubOAuth2UserService extends DefaultOAuth2UserService {
 
         if (email == null || email.isBlank()) {
             throw new OAuth2AuthenticationException(
+                    new OAuth2Error("email_github_ausente"),
                     "Não foi possível obter um e-mail válido da conta GitHub."
             );
         }
@@ -89,6 +92,7 @@ public class GitHubOAuth2UserService extends DefaultOAuth2UserService {
 
             if (usuarioRepository.existsByEmail(emailNormalizado)) {
                 throw new OAuth2AuthenticationException(
+                        new OAuth2Error("email_ja_cadastrado"),
                         "Já existe uma conta cadastrada com este e-mail."
                 );
             }
@@ -109,6 +113,21 @@ public class GitHubOAuth2UserService extends DefaultOAuth2UserService {
                     usuario.getEmail(),
                     "CADASTRO_GITHUB",
                     "Conta criada utilizando GitHub OAuth."
+            );
+        }
+
+        if (!usuario.isAtivo()) {
+
+            auditoriaService.registrar(
+                    usuario.getId(),
+                    usuario.getEmail(),
+                    "LOGIN_GITHUB_BLOQUEADO",
+                    "Tentativa de login via GitHub em conta inativa."
+            );
+
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error("usuario_inativo"),
+                    "Usuário inativo."
             );
         }
 

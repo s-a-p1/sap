@@ -1,5 +1,6 @@
 package com.sap.controller;
 
+import com.sap.dto.AceiteTermosRequest;
 import com.sap.dto.CadastroUsuarioRequest;
 import com.sap.dto.LoginRequest;
 import com.sap.model.ProvedorAutenticacao;
@@ -23,6 +24,7 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
@@ -67,14 +69,18 @@ public class AuthController {
                             "nome", usuario.getNome(),
                             "email", usuario.getEmail(),
                             "tipo", usuario.getTipo(),
-                            "provedor", usuario.getProvedor().name()
+                            "provedor", usuario.getProvedor().name(),
+                            "aceitouTermos", usuario.isAceitouTermos()
                     )
             );
 
         } catch (IllegalArgumentException e) {
             return ResponseEntity
                     .badRequest()
-                    .body(Map.of("erro", e.getMessage()));
+                    .body(Map.of(
+                            "erro",
+                            e.getMessage()
+                    ));
         }
     }
 
@@ -134,11 +140,13 @@ public class AuthController {
                             "nome", usuario.getNome(),
                             "email", usuario.getEmail(),
                             "tipo", usuario.getTipo(),
-                            "provedor", usuario.getProvedor().name()
+                            "provedor", usuario.getProvedor().name(),
+                            "aceitouTermos", usuario.isAceitouTermos()
                     )
             );
 
         } catch (AuthenticationException e) {
+
             Usuario usuario =
                     usuarioRepository.findByEmail(emailNormalizado)
                             .orElse(null);
@@ -159,7 +167,8 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<?> usuarioAtual(Authentication authentication) {
+    public ResponseEntity<?> usuarioAtual(
+            Authentication authentication) {
 
         Optional<Usuario> usuario =
                 buscarUsuarioAutenticado(authentication);
@@ -172,7 +181,8 @@ public class AuthController {
                                         "nome", valor.getNome(),
                                         "email", valor.getEmail(),
                                         "tipo", valor.getTipo(),
-                                        "provedor", valor.getProvedor().name()
+                                        "provedor", valor.getProvedor().name(),
+                                        "aceitouTermos", valor.isAceitouTermos()
                                 )
                         )
                 )
@@ -183,6 +193,47 @@ public class AuthController {
                                         "Usuário não autenticado."
                                 ))
                 );
+    }
+
+    @PostMapping("/aceitar-termos")
+    public ResponseEntity<?> aceitarTermos(
+            @Valid @RequestBody AceiteTermosRequest request,
+            Authentication authentication) {
+
+        Optional<Usuario> usuarioEncontrado =
+                buscarUsuarioAutenticado(authentication);
+
+        if (usuarioEncontrado.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                            "erro",
+                            "Usuário não autenticado."
+                    ));
+        }
+
+        Usuario usuario = usuarioEncontrado.get();
+
+        usuario.setAceitouTermos(true);
+        usuario.setDataAceiteTermos(LocalDateTime.now());
+        usuario.setVersaoTermos("1.0");
+
+        usuarioRepository.save(usuario);
+
+        auditoriaService.registrar(
+                usuario.getId(),
+                usuario.getEmail(),
+                "ACEITE_TERMOS",
+                "Usuário aceitou os Termos de Uso e a Política de Privacidade. Versão: 1.0."
+        );
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "mensagem",
+                        "Termos aceitos com sucesso.",
+                        "aceitouTermos",
+                        usuario.isAceitouTermos()
+                )
+        );
     }
 
     @PostMapping("/logout")
@@ -209,52 +260,67 @@ public class AuthController {
         SecurityContextHolder.clearContext();
 
         return ResponseEntity.ok(
-                Map.of("mensagem", "Logout realizado com sucesso.")
+                Map.of(
+                        "mensagem",
+                        "Logout realizado com sucesso."
+                )
         );
     }
 
     private Optional<Usuario> buscarUsuarioAutenticado(
             Authentication authentication) {
 
-        if (authentication == null || !authentication.isAuthenticated()) {
+        if (authentication == null
+                || !authentication.isAuthenticated()) {
+
             return Optional.empty();
         }
 
-        if (authentication instanceof OAuth2AuthenticationToken oauthToken) {
+        if (authentication
+                instanceof OAuth2AuthenticationToken oauthToken) {
+
             String registrationId =
                     oauthToken.getAuthorizedClientRegistrationId();
 
-            OAuth2User oauth2User = oauthToken.getPrincipal();
+            OAuth2User oauth2User =
+                    oauthToken.getPrincipal();
 
             if ("github".equalsIgnoreCase(registrationId)) {
-                Object idAttribute = oauth2User.getAttribute("id");
+
+                Object idAttribute =
+                        oauth2User.getAttribute("id");
 
                 if (idAttribute == null) {
                     return Optional.empty();
                 }
 
-                return usuarioRepository.findByProvedorAndProvedorId(
-                        ProvedorAutenticacao.GITHUB,
-                        idAttribute.toString()
-                );
+                return usuarioRepository
+                        .findByProvedorAndProvedorId(
+                                ProvedorAutenticacao.GITHUB,
+                                idAttribute.toString()
+                        );
             }
 
             if ("google".equalsIgnoreCase(registrationId)) {
-                Object subAttribute = oauth2User.getAttribute("sub");
+
+                Object subAttribute =
+                        oauth2User.getAttribute("sub");
 
                 if (subAttribute == null) {
                     return Optional.empty();
                 }
 
-                return usuarioRepository.findByProvedorAndProvedorId(
-                        ProvedorAutenticacao.GOOGLE,
-                        subAttribute.toString()
-                );
+                return usuarioRepository
+                        .findByProvedorAndProvedorId(
+                                ProvedorAutenticacao.GOOGLE,
+                                subAttribute.toString()
+                        );
             }
 
             return Optional.empty();
         }
 
-        return usuarioRepository.findByEmail(authentication.getName());
+        return usuarioRepository
+                .findByEmail(authentication.getName());
     }
 }

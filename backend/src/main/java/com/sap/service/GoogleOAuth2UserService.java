@@ -8,6 +8,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
@@ -50,12 +51,35 @@ public class GoogleOAuth2UserService extends OidcUserService {
                         provedorId
                 ));
 
-        auditoriaService.registrar(
-                usuario.getId(),
-                usuario.getEmail(),
-                "LOGIN_GOOGLE",
-                "Login realizado com sucesso utilizando Google OAuth."
-        );
+        if (!usuario.isAtivo()) {
+
+            auditoriaService.registrar(
+                    usuario.getId(),
+                    usuario.getEmail(),
+                    "LOGIN_GOOGLE_BLOQUEADO",
+                    "Tentativa de login via Google em conta inativa."
+            );
+
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error("usuario_inativo")
+            );
+        }
+
+        if (!usuario.isAceitouTermos()) {
+            auditoriaService.registrar(
+                    usuario.getId(),
+                    usuario.getEmail(),
+                    "LOGIN_GOOGLE_AGUARDANDO_TERMOS",
+                    "Login via Google aguardando aceite dos Termos de Uso e da Política de Privacidade."
+            );
+        } else {
+            auditoriaService.registrar(
+                    usuario.getId(),
+                    usuario.getEmail(),
+                    "LOGIN_GOOGLE",
+                    "Login realizado com sucesso utilizando Google OAuth."
+            );
+        }
 
         Set<SimpleGrantedAuthority> authorities =
                 new HashSet<>();
@@ -88,8 +112,8 @@ public class GoogleOAuth2UserService extends OidcUserService {
             String provedorId) {
 
         if (email == null || email.isBlank()) {
-            throw new IllegalStateException(
-                    "O Google não forneceu um e-mail para o usuário."
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error("email_google_indisponivel")
             );
         }
 
@@ -97,8 +121,8 @@ public class GoogleOAuth2UserService extends OidcUserService {
                 email.trim().toLowerCase();
 
         if (usuarioRepository.existsByEmail(emailNormalizado)) {
-            throw new IllegalStateException(
-                    "Já existe uma conta cadastrada com este e-mail."
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error("email_ja_cadastrado")
             );
         }
 
@@ -116,6 +140,9 @@ public class GoogleOAuth2UserService extends OidcUserService {
         usuario.setProvedor(ProvedorAutenticacao.GOOGLE);
         usuario.setProvedorId(provedorId);
         usuario.setAtivo(true);
+        usuario.setAceitouTermos(false);
+        usuario.setDataAceiteTermos(null);
+        usuario.setVersaoTermos(null);
 
         Usuario usuarioSalvo =
                 usuarioRepository.save(usuario);
@@ -124,7 +151,7 @@ public class GoogleOAuth2UserService extends OidcUserService {
                 usuarioSalvo.getId(),
                 usuarioSalvo.getEmail(),
                 "CADASTRO_GOOGLE",
-                "Conta criada utilizando Google OAuth."
+                "Conta criada utilizando Google OAuth aguardando aceite dos termos."
         );
 
         return usuarioSalvo;
