@@ -32,6 +32,10 @@ public class Questao {
     @JoinColumn(name = "avaliacao_id", nullable = false)
     private Avaliacao avaliacao;
 
+    @ManyToOne
+    @JoinColumn(name = "assunto_id")
+    private Assunto assunto;
+
     public Questao() {
     }
 
@@ -115,5 +119,12 @@ public class Questao {
 
     public void setAvaliacao(Avaliacao avaliacao) {
         this.avaliacao = avaliacao;
+    }
+    public Assunto getAssunto() {
+    return assunto;
+    }
+
+    public void setAssunto(Assunto assunto) {
+    this.assunto = assunto;
     }
 }

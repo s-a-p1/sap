@@ -16,6 +16,9 @@ public class Assunto {
     @Column(length = 255)
     private String descricao;
 
+    @Column(name = "visivel_catalogo", nullable = false)
+private Boolean visivelCatalogo = true;
+
     @ManyToOne
     @JoinColumn(name = "disciplina_id", nullable = false)
     private Disciplina disciplina;
@@ -60,4 +63,12 @@ public class Assunto {
     public void setDisciplina(Disciplina disciplina) {
         this.disciplina = disciplina;
     }
+
+    public Boolean getVisivelCatalogo() {
+    return visivelCatalogo;
+}
+
+public void setVisivelCatalogo(Boolean visivelCatalogo) {
+    this.visivelCatalogo = visivelCatalogo;
+}
 }

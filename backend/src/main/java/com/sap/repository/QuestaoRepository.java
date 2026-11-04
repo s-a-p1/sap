@@ -1,3 +1,4 @@
+
 package com.sap.repository;
 
 import com.sap.model.Questao;
@@ -8,4 +9,8 @@ import java.util.List;
 public interface QuestaoRepository extends JpaRepository<Questao, Long> {
 
     List<Questao> findByAvaliacao_Id(Long avaliacaoId);
+
+    boolean existsByAssunto_Id(Long assuntoId);
+
+    long countByAvaliacao_Id(Long avaliacaoId);
 }

@@ -1,25 +1,38 @@
+
 package com.sap.config;
 
 import com.sap.service.CustomUserDetailsService;
 import com.sap.service.GitHubOAuth2UserService;
 import com.sap.service.GoogleOAuth2UserService;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
@@ -54,10 +67,44 @@ public class SecurityConfig {
                 .cors(cors -> {
                 })
 
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(
+                                CookieCsrfTokenRepository.withHttpOnlyFalse()
+                        )
+                        .csrfTokenRequestHandler(
+                                new CsrfTokenRequestAttributeHandler()
+                        )
+
+                        .ignoringRequestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/cadastro",
+                                "/api/auth/esqueci-senha"
+                        )
+
+                )
+
+                .exceptionHandling(exceptions -> exceptions
+                        .defaultAuthenticationEntryPointFor(
+                                (request, response, authException) -> {
+                                    response.setStatus(
+                                            HttpServletResponse.SC_UNAUTHORIZED
+                                    );
+                                    response.setContentType(
+                                            MediaType.APPLICATION_JSON_VALUE
+                                    );
+                                    response.setCharacterEncoding(
+                                            StandardCharsets.UTF_8.name()
+                                    );
+                                    response.getWriter().write(
+                                            "{\"erro\":\"Usuário não autenticado.\"}"
+                                    );
+                                },
+                                request -> request.getServletPath()
+                                        .startsWith("/api/")
+                        )
+                )
 
                 .oauth2Login(oauth -> oauth
-
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(gitHubOAuth2UserService)
                                 .oidcUserService(googleOAuth2UserService)
@@ -133,13 +180,17 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        .requestMatchers(
-                                "/api/auth/cadastro",
-                                "/api/auth/login",
-                                "/oauth2/**",
-                                "/login/oauth2/**"
-                        )
-                        .permitAll()
+                .requestMatchers(
+                        "/api/auth/csrf",
+                        "/api/auth/cadastro",
+                        "/api/auth/login",
+                        "/api/auth/esqueci-senha",
+                        "/api/auth/redefinir-senha",
+                        "/oauth2/**",
+                        "/login/oauth2/**"
+                )
+                .permitAll()
+
 
                         .requestMatchers(
                                 "/api/auth/me",
@@ -149,6 +200,8 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 HttpMethod.GET,
+                                "/api/cursos",
+                                "/api/ofertas-disciplinas",
                                 "/api/disciplinas/**",
                                 "/api/assuntos/**",
                                 "/api/avaliacoes",
@@ -159,12 +212,28 @@ public class SecurityConfig {
                                 "PROFESSOR"
                         )
 
+                        .requestMatchers("/api/questoes/professor/**")
+                        .hasRole("PROFESSOR")
+
                         .requestMatchers(
                                 "/api/questoes/**",
                                 "/api/avaliacoes/finalizar",
-                                "/api/analises/**"
+                                "/api/analises/**",
+                                "/api/resultados",
+                                "/api/resultados/**",
+                                "/api/configuracao-academica",
+                                "/api/configuracao-academica/**",
+                                "/api/notificacoes",
+                                "/api/notificacoes/**",
+                                "/api/preferencias-notificacoes",
+                                "/api/preferencias-notificacoes/**",
+                                "/api/plano-estudos",
+                                "/api/plano-estudos/**"
                         )
                         .hasRole("ESTUDANTE")
+
+                        .requestMatchers("/api/admin/**")
+                        .hasRole("ADMIN")
 
                         .anyRequest()
                         .authenticated()
@@ -180,5 +249,37 @@ public class SecurityConfig {
 
         return authenticationConfiguration
                 .getAuthenticationManager();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        configuration.setAllowedOrigins(
+                List.of("http://localhost:5173")
+        );
+
+        configuration.setAllowedMethods(
+                List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+        );
+
+        configuration.setAllowedHeaders(
+                List.of(
+                        "Authorization",
+                        "Content-Type",
+                        "Accept",
+                        "X-XSRF-TOKEN"
+                )
+        );
+
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
     }
 }
