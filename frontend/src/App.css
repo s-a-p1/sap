@@ -154,6 +154,7 @@ button:disabled {
   font-size: clamp(42px, 5vw, 70px);
   line-height: 1.02;
   letter-spacing: -0.055em;
+  color: #ffffff;
 }
 
 .auth-brand > .brand-conteudo > p {

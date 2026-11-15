@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import "./App.css";
 
 const API_URL = "http://localhost:8080";
@@ -1046,6 +1046,7 @@ async function excluirDisciplinaProfessor() {
   const [nomeProfessorAdmin, setNomeProfessorAdmin] = useState("");
   const [emailProfessorAdmin, setEmailProfessorAdmin] = useState("");
   const [senhaProfessorAdmin, setSenhaProfessorAdmin] = useState("");
+  const [confirmarSenhaProfessorAdmin, setConfirmarSenhaProfessorAdmin] = useState("");
   const [cadastrandoProfessorAdmin, setCadastrandoProfessorAdmin] = useState(false);
   const [erroCadastroProfessorAdmin, setErroCadastroProfessorAdmin] = useState("");
   const [sucessoCadastroProfessorAdmin, setSucessoCadastroProfessorAdmin] = useState("");
@@ -1389,6 +1390,12 @@ async function cadastrarProfessorAdmin(evento) {
     return;
   }
 
+  if (senhaProfessorAdmin !== confirmarSenhaProfessorAdmin) {
+  setErroCadastroProfessorAdmin("As senhas não coincidem.");
+  setSucessoCadastroProfessorAdmin("");
+  return;
+}
+
   setCadastrandoProfessorAdmin(true);
   setErroCadastroProfessorAdmin("");
   setSucessoCadastroProfessorAdmin("");
@@ -1428,9 +1435,10 @@ async function cadastrarProfessorAdmin(evento) {
     }));
 
     setNomeProfessorAdmin("");
-    setEmailProfessorAdmin("");
-    setSenhaProfessorAdmin("");
-    setSucessoCadastroProfessorAdmin("Professor cadastrado com sucesso!");
+setEmailProfessorAdmin("");
+setSenhaProfessorAdmin("");
+setConfirmarSenhaProfessorAdmin("");
+setSucessoCadastroProfessorAdmin("Professor cadastrado com sucesso!");
     setTimeout(() => {
       setSucessoCadastroProfessorAdmin("");
     }, 5000);
@@ -3995,6 +4003,20 @@ if (
         required
       />
     </div>
+    <div className="admin-campo-professor">
+  <label htmlFor="admin-confirmar-senha-professor">
+    Confirmar senha
+  </label>
+  <input
+    id="admin-confirmar-senha-professor"
+    type="password"
+    placeholder="Digite novamente a senha"
+    value={confirmarSenhaProfessorAdmin}
+    onChange={(e) => setConfirmarSenhaProfessorAdmin(e.target.value)}
+    minLength={6}
+    required
+  />
+</div>
 
     {erroCadastroProfessorAdmin && (
       <p className="admin-erro">{erroCadastroProfessorAdmin}</p>
