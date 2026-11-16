@@ -3,6 +3,7 @@ package com.sap.controller;
 
 import com.sap.model.Assunto;
 import com.sap.service.AssuntoService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,7 +34,7 @@ public class AssuntoController {
 
     @PostMapping
     @PreAuthorize("hasRole('PROFESSOR')")
-    public ResponseEntity<Assunto> cadastrar(@RequestBody Assunto assunto) {
+    public ResponseEntity<Assunto> cadastrar(@Valid @RequestBody Assunto assunto) {
         Assunto novoAssunto = assuntoService.cadastrar(assunto);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(novoAssunto);

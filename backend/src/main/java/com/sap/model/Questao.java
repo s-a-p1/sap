@@ -1,6 +1,10 @@
 package com.sap.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "questoes")
@@ -8,26 +12,43 @@ public class Questao {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+
     private Long id;
 
+    @NotBlank(message = "O enunciado da questão é obrigatório")
+    @Size(max = 5000, message = "O enunciado deve ter no máximo 5000 caracteres")
     @Column(nullable = false, columnDefinition = "TEXT")
     private String enunciado;
 
+    @NotBlank(message = "A alternativa A é obrigatória")
+    @Size(max = 255, message = "A alternativa A deve ter no máximo 255 caracteres")
     @Column(name = "alternativa_a", nullable = false, length = 255)
     private String alternativaA;
 
+    @NotBlank(message = "A alternativa B é obrigatória")
+    @Size(max = 255, message = "A alternativa B deve ter no máximo 255 caracteres")
     @Column(name = "alternativa_b", nullable = false, length = 255)
     private String alternativaB;
 
+    @NotBlank(message = "A alternativa C é obrigatória")
+    @Size(max = 255, message = "A alternativa C deve ter no máximo 255 caracteres")
     @Column(name = "alternativa_c", nullable = false, length = 255)
     private String alternativaC;
 
+    @NotBlank(message = "A alternativa D é obrigatória")
+    @Size(max = 255, message = "A alternativa D deve ter no máximo 255 caracteres")
     @Column(name = "alternativa_d", nullable = false, length = 255)
     private String alternativaD;
 
+    @NotBlank(message = "A resposta correta é obrigatória")
+    @Pattern(
+            regexp = "[ABCD]",
+            message = "A resposta correta deve ser A, B, C ou D"
+    )
     @Column(name = "resposta_correta", nullable = false, length = 1)
     private String respostaCorreta;
 
+    @NotNull(message = "A avaliação da questão é obrigatória")
     @ManyToOne
     @JoinColumn(name = "avaliacao_id", nullable = false)
     private Avaliacao avaliacao;
@@ -35,6 +56,7 @@ public class Questao {
     @ManyToOne
     @JoinColumn(name = "assunto_id")
     private Assunto assunto;
+
 
     public Questao() {
     }

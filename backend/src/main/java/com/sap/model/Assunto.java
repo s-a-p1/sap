@@ -1,6 +1,10 @@
+
 package com.sap.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "assuntos")
@@ -10,15 +14,19 @@ public class Assunto {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "O nome do assunto é obrigatório")
+    @Size(max = 100, message = "O nome do assunto deve ter no máximo 100 caracteres")
     @Column(nullable = false, length = 100)
     private String nome;
 
+    @Size(max = 255, message = "A descrição deve ter no máximo 255 caracteres")
     @Column(length = 255)
     private String descricao;
 
     @Column(name = "visivel_catalogo", nullable = false)
-private Boolean visivelCatalogo = true;
+    private Boolean visivelCatalogo = true;
 
+    @NotNull(message = "A disciplina do assunto é obrigatória")
     @ManyToOne
     @JoinColumn(name = "disciplina_id", nullable = false)
     private Disciplina disciplina;
@@ -65,10 +73,10 @@ private Boolean visivelCatalogo = true;
     }
 
     public Boolean getVisivelCatalogo() {
-    return visivelCatalogo;
-}
+        return visivelCatalogo;
+    }
 
-public void setVisivelCatalogo(Boolean visivelCatalogo) {
-    this.visivelCatalogo = visivelCatalogo;
-}
+    public void setVisivelCatalogo(Boolean visivelCatalogo) {
+        this.visivelCatalogo = visivelCatalogo;
+    }
 }

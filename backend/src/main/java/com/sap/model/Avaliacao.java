@@ -2,6 +2,9 @@
 package com.sap.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 
 @Entity
@@ -12,9 +15,12 @@ public class Avaliacao {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "O título da avaliação é obrigatório")
+    @Size(max = 150, message = "O título da avaliação deve ter no máximo 150 caracteres")
     @Column(nullable = false, length = 150)
     private String titulo;
 
+    @NotNull(message = "O assunto da avaliação é obrigatório")
     @ManyToOne
     @JoinColumn(name = "assunto_id", nullable = false)
     private Assunto assunto;

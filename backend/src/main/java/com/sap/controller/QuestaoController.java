@@ -2,6 +2,9 @@
 package com.sap.controller;
 
 import com.sap.dto.QuestaoResponse;
+import com.sap.dto.QuestaoRequest;
+import com.sap.dto.QuestaoEdicaoRequest;
+import jakarta.validation.Valid;
 import com.sap.model.Avaliacao;
 import com.sap.model.Questao;
 import com.sap.model.Usuario;
@@ -18,7 +21,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 @RestController
 @RequestMapping("/api/questoes")
@@ -98,9 +100,9 @@ public class QuestaoController {
     }
 
     @PostMapping("/professor")
-    public ResponseEntity<?> cadastrarQuestaoProfessor(
-            @RequestBody Map<String, Object> dados,
-            Authentication authentication) {
+        public ResponseEntity<?> cadastrarQuestaoProfessor(
+        @Valid @RequestBody QuestaoRequest dados,
+        Authentication authentication) {
 
         Optional<Usuario> usuarioEncontrado =
                 usuarioAutenticadoService.buscar(authentication);
@@ -117,16 +119,7 @@ public class QuestaoController {
                     .body(Map.of("erro", "Acesso permitido apenas a professores."));
         }
 
-        Long avaliacaoId;
-
-        try {
-            avaliacaoId = Long.valueOf(
-                    String.valueOf(dados.get("avaliacaoId"))
-            );
-        } catch (NumberFormatException excecao) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("erro", "Informe uma avaliação válida."));
-        }
+        Long avaliacaoId = dados.getAvaliacaoId();
 
         Avaliacao avaliacao =
                 avaliacaoRepository.findById(avaliacaoId).orElse(null);
@@ -144,50 +137,12 @@ public class QuestaoController {
                     ));
         }
 
-        String enunciado = dados.get("enunciado") instanceof String valor
-                ? valor.trim() : "";
-
-        String alternativaA = dados.get("alternativaA") instanceof String valor
-                ? valor.trim() : "";
-
-        String alternativaB = dados.get("alternativaB") instanceof String valor
-                ? valor.trim() : "";
-
-        String alternativaC = dados.get("alternativaC") instanceof String valor
-                ? valor.trim() : "";
-
-        String alternativaD = dados.get("alternativaD") instanceof String valor
-                ? valor.trim() : "";
-
-        String respostaCorreta = dados.get("respostaCorreta") instanceof String valor
-                ? valor.trim().toUpperCase() : "";
-
-        if (enunciado.isBlank()
-                || alternativaA.isBlank()
-                || alternativaB.isBlank()
-                || alternativaC.isBlank()
-                || alternativaD.isBlank()) {
-
-            return ResponseEntity.badRequest()
-                    .body(Map.of("erro", "Preencha todos os campos da questão."));
-        }
-
-        if (alternativaA.length() > 255
-                || alternativaB.length() > 255
-                || alternativaC.length() > 255
-                || alternativaD.length() > 255) {
-
-            return ResponseEntity.badRequest()
-                    .body(Map.of(
-                            "erro",
-                            "Cada alternativa deve ter no máximo 255 caracteres."
-                    ));
-        }
-
-        if (!Set.of("A", "B", "C", "D").contains(respostaCorreta)) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("erro", "Selecione uma resposta correta válida."));
-        }
+        String enunciado = dados.getEnunciado().trim();
+        String alternativaA = dados.getAlternativaA().trim();
+        String alternativaB = dados.getAlternativaB().trim();
+        String alternativaC = dados.getAlternativaC().trim();
+        String alternativaD = dados.getAlternativaD().trim();
+        String respostaCorreta = dados.getRespostaCorreta().trim().toUpperCase();
 
         Questao questao = new Questao(
                 enunciado,
@@ -210,11 +165,11 @@ public class QuestaoController {
                 ));
     }
 
-    @PutMapping("/professor/{questaoId}")
-    public ResponseEntity<?> editarQuestaoProfessor(
-            @PathVariable Long questaoId,
-            @RequestBody Map<String, Object> dados,
-            Authentication authentication) {
+   @PutMapping("/professor/{questaoId}")
+        public ResponseEntity<?> editarQuestaoProfessor(
+        @PathVariable Long questaoId,
+        @Valid @RequestBody QuestaoEdicaoRequest dados,
+        Authentication authentication) {
 
         Optional<Usuario> usuarioEncontrado =
                 usuarioAutenticadoService.buscar(authentication);
@@ -247,51 +202,13 @@ public class QuestaoController {
                             "Esta questão não pode ser editada porque a avaliação já possui resultados de estudantes."
                     ));
         }
+        String enunciado = dados.getEnunciado().trim();
+        String alternativaA = dados.getAlternativaA().trim();
+        String alternativaB = dados.getAlternativaB().trim();
+        String alternativaC = dados.getAlternativaC().trim();
+        String alternativaD = dados.getAlternativaD().trim();
+        String respostaCorreta = dados.getRespostaCorreta().trim().toUpperCase();
 
-        String enunciado = dados.get("enunciado") instanceof String valor
-                ? valor.trim() : "";
-
-        String alternativaA = dados.get("alternativaA") instanceof String valor
-                ? valor.trim() : "";
-
-        String alternativaB = dados.get("alternativaB") instanceof String valor
-                ? valor.trim() : "";
-
-        String alternativaC = dados.get("alternativaC") instanceof String valor
-                ? valor.trim() : "";
-
-        String alternativaD = dados.get("alternativaD") instanceof String valor
-                ? valor.trim() : "";
-
-        String respostaCorreta = dados.get("respostaCorreta") instanceof String valor
-                ? valor.trim().toUpperCase() : "";
-
-        if (enunciado.isBlank()
-                || alternativaA.isBlank()
-                || alternativaB.isBlank()
-                || alternativaC.isBlank()
-                || alternativaD.isBlank()) {
-
-            return ResponseEntity.badRequest()
-                    .body(Map.of("erro", "Preencha todos os campos da questão."));
-        }
-
-        if (alternativaA.length() > 255
-                || alternativaB.length() > 255
-                || alternativaC.length() > 255
-                || alternativaD.length() > 255) {
-
-            return ResponseEntity.badRequest()
-                    .body(Map.of(
-                            "erro",
-                            "Cada alternativa deve ter no máximo 255 caracteres."
-                    ));
-        }
-
-        if (!Set.of("A", "B", "C", "D").contains(respostaCorreta)) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("erro", "Selecione uma resposta correta válida."));
-        }
 
         questao.setEnunciado(enunciado);
         questao.setAlternativaA(alternativaA);

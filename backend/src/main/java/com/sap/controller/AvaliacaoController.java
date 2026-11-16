@@ -3,6 +3,8 @@ package com.sap.controller;
 
 import com.sap.model.Assunto;
 import com.sap.model.Avaliacao;
+import com.sap.dto.AvaliacaoRequest;
+import jakarta.validation.Valid;
 import com.sap.model.Usuario;
 import com.sap.repository.AssuntoRepository;
 import com.sap.repository.AvaliacaoRepository;
@@ -49,9 +51,9 @@ public class AvaliacaoController {
     }
 
     @PostMapping("/professor")
-    public ResponseEntity<?> cadastrarProfessor(
-            @RequestBody Map<String, Object> dados,
-            Authentication authentication) {
+        public ResponseEntity<?> cadastrarProfessor(
+        @Valid @RequestBody AvaliacaoRequest dados,
+        Authentication authentication) {
 
         Optional<Usuario> usuarioEncontrado =
                 usuarioAutenticadoService.buscar(authentication);
@@ -68,37 +70,8 @@ public class AvaliacaoController {
                     .body(Map.of("erro", "Acesso permitido apenas a professores."));
         }
 
-        Object tituloRecebido = dados.get("titulo");
-        Object assuntoIdRecebido = dados.get("assuntoId");
-
-        if (!(tituloRecebido instanceof String)) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("erro", "Informe o título da avaliação."));
-        }
-
-        String titulo = ((String) tituloRecebido).trim();
-
-        if (titulo.isEmpty()) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("erro", "Informe o título da avaliação."));
-        }
-
-        if (titulo.length() > 150) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("erro", "O título deve ter no máximo 150 caracteres."));
-        }
-
-        if (!(assuntoIdRecebido instanceof Number)) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("erro", "Informe um assunto válido."));
-        }
-
-        Long assuntoId = ((Number) assuntoIdRecebido).longValue();
-
-        if (assuntoId <= 0) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("erro", "Informe um assunto válido."));
-        }
+        String titulo = dados.getTitulo().trim();
+        Long assuntoId = dados.getAssuntoId();
 
         Assunto assunto = assuntoRepository.findById(assuntoId).orElse(null);
 
@@ -143,10 +116,10 @@ public class AvaliacaoController {
     }
 
     @PutMapping("/professor/{id}")
-    public ResponseEntity<?> editarProfessor(
-            @PathVariable Long id,
-            @RequestBody Map<String, Object> dados,
-            Authentication authentication) {
+        public ResponseEntity<?> editarProfessor(
+        @PathVariable Long id,
+        @Valid @RequestBody AvaliacaoRequest dados,
+        Authentication authentication) {
 
         Optional<Usuario> usuarioEncontrado =
                 usuarioAutenticadoService.buscar(authentication);
@@ -170,36 +143,8 @@ public class AvaliacaoController {
                     .body(Map.of("erro", "Avaliação não encontrada."));
         }
 
-        Object tituloRecebido = dados.get("titulo");
-        Object assuntoIdRecebido = dados.get("assuntoId");
-
-        if (!(tituloRecebido instanceof String)) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("erro", "Informe o título da avaliação."));
-        }
-
-        String titulo = ((String) tituloRecebido).trim();
-
-        if (titulo.isEmpty() || titulo.length() > 150) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of(
-                            "erro",
-                            "O título deve ter entre 1 e 150 caracteres."
-                    ));
-        }
-
-        if (!(assuntoIdRecebido instanceof Number)) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("erro", "Informe um assunto válido."));
-        }
-
-        Long assuntoId = ((Number) assuntoIdRecebido).longValue();
-
-        if (assuntoId <= 0) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("erro", "Informe um assunto válido."));
-        }
-
+        String titulo = dados.getTitulo().trim();
+        Long assuntoId = dados.getAssuntoId();
         Assunto assunto = assuntoRepository.findById(assuntoId).orElse(null);
 
         if (assunto == null) {

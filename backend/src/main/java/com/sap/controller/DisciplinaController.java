@@ -8,6 +8,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.List;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/disciplinas")
@@ -26,7 +27,7 @@ public class DisciplinaController {
 
     @PostMapping
     @PreAuthorize("hasRole('PROFESSOR')")
-    public ResponseEntity<Disciplina> cadastrar(@RequestBody Disciplina disciplina) {
+    public ResponseEntity<Disciplina> cadastrar(@Valid @RequestBody Disciplina disciplina) {
         Disciplina novaDisciplina = disciplinaService.cadastrar(disciplina);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(novaDisciplina);

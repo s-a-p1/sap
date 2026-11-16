@@ -1,7 +1,7 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 
-const API_URL = "http://localhost:8080";
+const API_URL = import.meta.env.VITE_API_URL;
 
 async function fetchProtegido(url, options = {}) {
   const respostaCsrf = await fetch(`${API_URL}/api/auth/csrf`, {
@@ -1591,7 +1591,7 @@ const carregarMetasEstudo = async () => {
     setErroMetas("");
 
     try {
-        const resposta = await fetch("http://localhost:8080/api/plano-estudos", {
+        const resposta = await fetch(`${API_URL}/api/plano-estudos`, {
             method: "GET",
             credentials: "include"
         });
@@ -1614,7 +1614,7 @@ const atualizarConclusaoMeta = async (metaId, concluida) => {
 
   try {
     const resposta = await fetchProtegido(
-      `http://localhost:8080/api/plano-estudos/${metaId}/conclusao`,
+      `${API_URL}/api/plano-estudos/${metaId}/conclusao`,
       {
         method: "PATCH",
         credentials: "include",
@@ -2167,7 +2167,7 @@ useEffect(() => {
 async function carregarContadorNotificacoes() {
   try {
     const resposta = await fetch(
-      "http://localhost:8080/api/notificacoes/nao-lidas",
+      `${API_URL}/api/notificacoes/nao-lidas`,
       {
         credentials: "include"
       }
@@ -2196,10 +2196,10 @@ async function carregarNotificacoes() {
 
   try {
     const [respostaNotificacoes, respostaContagem] = await Promise.all([
-      fetch("http://localhost:8080/api/notificacoes", {
+      fetch(`${API_URL}/api/notificacoes`, {
         credentials: "include"
       }),
-      fetch("http://localhost:8080/api/notificacoes/nao-lidas", {
+      fetch(`${API_URL}/api/notificacoes/nao-lidas`, {
         credentials: "include"
       })
     ]);
@@ -2232,7 +2232,7 @@ async function carregarNotificacoes() {
 async function marcarNotificacaoComoLida(notificacaoId) {
   try {
     const resposta = await fetchProtegido(
-      `http://localhost:8080/api/notificacoes/${notificacaoId}/ler`,
+      `${API_URL}/api/notificacoes/${notificacaoId}/ler`,
       {
         method: "PATCH",
         credentials: "include"
@@ -2454,7 +2454,7 @@ function voltarParaAvaliacoes() {
 
     try {
       const resposta = await fetch(
-        "http://localhost:8080/api/resultados/meu-historico",
+        `${API_URL}/api/resultados/meu-historico`,
         {
           credentials: "include",
         }
@@ -2486,7 +2486,7 @@ async function carregarDesempenhosAssunto() {
 
   try {
     const resposta = await fetch(
-      "http://localhost:8080/api/resultados/meu-desempenho-assuntos",
+      `${API_URL}/api/resultados/meu-desempenho-assuntos`,
       {
         credentials: "include",
       }
@@ -3083,7 +3083,7 @@ if (!usuario && paginaRecuperacao === "/redefinir-senha") {
 
               try {
                 const respostaCsrf = await fetch(
-                  "http://localhost:8080/api/auth/csrf",
+                  `${API_URL}/api/auth/csrf`,
                   {
                     credentials: "include"
                   }
@@ -3096,7 +3096,7 @@ if (!usuario && paginaRecuperacao === "/redefinir-senha") {
                 const dadosCsrf = await respostaCsrf.json();
 
                 const resposta = await fetch(
-                  "http://localhost:8080/api/auth/redefinir-senha",
+                  `${API_URL}/api/auth/redefinir-senha`,
                   {
                     method: "POST",
                     credentials: "include",
@@ -3236,7 +3236,7 @@ if (!usuario && paginaRecuperacao === "/esqueci-senha") {
 
               try {
                 const resposta = await fetch(
-                  "http://localhost:8080/api/auth/esqueci-senha",
+                  `${API_URL}/api/auth/esqueci-senha`,
                   {
                     method: "POST",
                     headers: {
