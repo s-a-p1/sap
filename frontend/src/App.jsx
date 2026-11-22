@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import "./App.css";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -1047,6 +1047,8 @@ async function excluirDisciplinaProfessor() {
   const [emailProfessorAdmin, setEmailProfessorAdmin] = useState("");
   const [senhaProfessorAdmin, setSenhaProfessorAdmin] = useState("");
   const [confirmarSenhaProfessorAdmin, setConfirmarSenhaProfessorAdmin] = useState("");
+  const [mostrarSenhaProfessorAdmin, setMostrarSenhaProfessorAdmin] = useState(false);
+  const [mostrarConfirmarSenhaProfessorAdmin, setMostrarConfirmarSenhaProfessorAdmin] = useState(false);
   const [cadastrandoProfessorAdmin, setCadastrandoProfessorAdmin] = useState(false);
   const [erroCadastroProfessorAdmin, setErroCadastroProfessorAdmin] = useState("");
   const [sucessoCadastroProfessorAdmin, setSucessoCadastroProfessorAdmin] = useState("");
@@ -1160,14 +1162,20 @@ useEffect(() => {
   const [excluindoConta, setExcluindoConta] = useState(false);
   const [erroExclusao, setErroExclusao] = useState("");
 
-  useEffect(() => {
-  if (paginaAtiva === "perfil" && usuario) {
+  
+useEffect(() => {
+  const perfilAberto =
+    (usuario?.tipo === "ESTUDANTE" && paginaAtiva === "perfil") ||
+    (usuario?.tipo === "PROFESSOR" && paginaProfessor === "perfil");
+
+  if (perfilAberto && usuario) {
     setNomePerfil(usuario.nome || "");
     setEmailPerfil(usuario.email || "");
     setMensagemPerfil("");
     setErroPerfil("");
   }
-}, [paginaAtiva, usuario]);
+}, [paginaAtiva, paginaProfessor, usuario]);
+
 
 const salvarPerfil = async (event) => {
   event.preventDefault();
@@ -2938,6 +2946,250 @@ function selecionarResposta(questaoId, alternativa) {
     }
   }
 
+  function renderPerfil() {
+    return (
+<section className="dashboard-academico">
+    <div className="dashboard-cabecalho">
+      <div>
+        <span className="secao-etiqueta">Configurações da conta</span>
+        <h1>Meu Perfil</h1>
+        <p>Gerencie suas informações pessoais e a segurança da sua conta.</p>
+      </div>
+    </div>
+
+    <div className="perfil-informacoes">
+  <h2>Informações da Conta</h2>
+
+  <form onSubmit={salvarPerfil} className="perfil-formulario">
+    <label htmlFor="perfil-nome">Nome completo</label>
+    <input
+      id="perfil-nome"
+      type="text"
+      value={nomePerfil}
+      onChange={(event) => setNomePerfil(event.target.value)}
+      maxLength={100}
+      required
+    />
+
+    <label htmlFor="perfil-email">E-mail</label>
+    <input
+      id="perfil-email"
+      type="email"
+      value={emailPerfil}
+      onChange={(event) => setEmailPerfil(event.target.value)}
+      maxLength={150}
+      required
+    />
+
+    {erroPerfil && <p role="alert">{erroPerfil}</p>}
+    {mensagemPerfil && <p role="status">{mensagemPerfil}</p>}
+
+    <button type="submit" disabled={salvandoPerfil}>
+      {salvandoPerfil ? "Salvando..." : "Salvar alterações"}
+    </button>
+  </form>
+</div>
+<div className="perfil-informacoes">
+  <h2>Alterar Senha</h2>
+
+  <form onSubmit={alterarSenhaPerfil} className="perfil-formulario">
+    <label htmlFor="perfil-senha-atual">Senha atual</label>
+    <div className="perfil-campo-senha">
+      <input
+        id="perfil-senha-atual"
+        type={mostrarSenhaAtual ? "text" : "password"}
+        value={senhaAtualPerfil}
+        onChange={(event) => setSenhaAtualPerfil(event.target.value)}
+        autoComplete="current-password"
+        required
+      />
+      <button
+        type="button"
+        onClick={() => setMostrarSenhaAtual(!mostrarSenhaAtual)}
+        aria-label={mostrarSenhaAtual ? "Ocultar senha atual" : "Mostrar senha atual"}
+      >
+        {mostrarSenhaAtual ? "Ocultar" : "Mostrar"}
+      </button>
+    </div>
+
+    <label htmlFor="perfil-nova-senha">Nova senha</label>
+    <div className="perfil-campo-senha">
+      <input
+        id="perfil-nova-senha"
+        type={mostrarNovaSenha ? "text" : "password"}
+        value={novaSenhaPerfil}
+        onChange={(event) => setNovaSenhaPerfil(event.target.value)}
+        autoComplete="new-password"
+        minLength={8}
+        required
+      />
+      <button
+        type="button"
+        onClick={() => setMostrarNovaSenha(!mostrarNovaSenha)}
+        aria-label={mostrarNovaSenha ? "Ocultar nova senha" : "Mostrar nova senha"}
+      >
+        {mostrarNovaSenha ? "Ocultar" : "Mostrar"}
+      </button>
+    </div>
+
+    <label htmlFor="perfil-confirmar-senha">Confirmar nova senha</label>
+    <div className="perfil-campo-senha">
+      <input
+        id="perfil-confirmar-senha"
+        type={mostrarConfirmarSenha ? "text" : "password"}
+        value={confirmarSenhaPerfil}
+        onChange={(event) => setConfirmarSenhaPerfil(event.target.value)}
+        autoComplete="new-password"
+        minLength={8}
+        required
+      />
+      <button
+        type="button"
+        onClick={() => setMostrarConfirmarSenha(!mostrarConfirmarSenha)}
+        aria-label={mostrarConfirmarSenha ? "Ocultar confirmação" : "Mostrar confirmação"}
+      >
+        {mostrarConfirmarSenha ? "Ocultar" : "Mostrar"}
+      </button>
+    </div>
+
+    {erroSenhaPerfil && <p role="alert">{erroSenhaPerfil}</p>}
+    {mensagemSenhaPerfil && <p role="status">{mensagemSenhaPerfil}</p>}
+
+    <button type="submit" disabled={alterandoSenha}>
+      {alterandoSenha ? "Alterando..." : "Alterar senha"}
+    </button>
+  </form>
+</div>
+<div className="perfil-informacoes">
+  <h2>Excluir Conta</h2>
+
+  <p>
+    Ao excluir sua conta, suas informações pessoais,
+    histórico de avaliações e dados de aprendizagem
+    serão removidos permanentemente.
+  </p>
+
+  <button
+    type="button"
+    onClick={() => setConfirmacaoExclusaoAberta(true)}
+  >
+    Excluir minha conta
+  </button>
+</div>
+{confirmacaoExclusaoAberta && (
+  <div className="perfil-modal-overlay">
+    <div
+      className="perfil-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="titulo-confirmacao-exclusao"
+    >
+      <h2 id="titulo-confirmacao-exclusao">
+        Deseja realmente excluir sua conta?
+      </h2>
+
+      <p>
+        Essa ação é permanente e não poderá ser desfeita.
+        Seus dados pessoais e seu histórico de aprendizagem serão removidos.
+      </p>
+
+      <div className="perfil-modal-acoes">
+        <button
+          type="button"
+          onClick={() => setConfirmacaoExclusaoAberta(false)}
+        >
+          Cancelar
+        </button>
+
+        <button
+      type="button"
+      onClick={() => {
+        setConfirmacaoExclusaoAberta(false);
+        setSenhaExclusao("");
+        setMostrarSenhaExclusao(false);
+        setConfirmacaoSenhaExclusaoAberta(true);
+      }}
+    >
+      Sim, continuar
+    </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{confirmacaoSenhaExclusaoAberta && (
+  <div className="perfil-modal-overlay">
+    <div
+      className="perfil-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="titulo-senha-exclusao"
+    >
+      <h2 id="titulo-senha-exclusao">
+        Confirmar exclusão da conta
+      </h2>
+
+      <p>
+        Para sua segurança, informe sua senha atual.
+        Esta ação é permanente e não poderá ser desfeita.
+      </p>
+
+      <div className="perfil-formulario">
+        <label htmlFor="senha-confirmacao-exclusao">
+          Senha atual
+        </label>
+
+        <div className="perfil-campo-senha">
+          <input
+            id="senha-confirmacao-exclusao"
+            type={mostrarSenhaExclusao ? "text" : "password"}
+            value={senhaExclusao}
+            onChange={(event) => setSenhaExclusao(event.target.value)}
+            autoComplete="current-password"
+            required
+          />
+
+          <button
+            type="button"
+            onClick={() => setMostrarSenhaExclusao(!mostrarSenhaExclusao)}
+          >
+            {mostrarSenhaExclusao ? "Ocultar" : "Mostrar"}
+          </button>
+        </div>
+      </div>
+{erroExclusao && (
+  <p role="alert" className="perfil-erro-exclusao">
+    {erroExclusao}
+  </p>
+)}
+      <div className="perfil-modal-acoes">
+        <button
+          type="button"
+          onClick={() => {
+            setConfirmacaoSenhaExclusaoAberta(false);
+            setSenhaExclusao("");
+            setMostrarSenhaExclusao(false);
+          }}
+        >
+          Cancelar
+        </button>
+
+        <button
+    type="button"
+    onClick={excluirContaPerfil}
+    disabled={!senhaExclusao.trim() || excluindoConta}
+  >
+    {excluindoConta ? "Excluindo..." : "Excluir definitivamente"}
+  </button>
+      </div>
+    </div>
+  </div>
+)}
+
+  </section>
+    );
+  }
+
   function renderModalLegal() {
     if (!modalLegal) {
       return null;
@@ -4061,7 +4313,9 @@ if (
             <div className="admin-usuario-card" key={usuarioItem.id}>
               <div className="admin-usuario-info">
                 <strong>{usuarioItem.nome}</strong>
-                <span>{usuarioItem.email}</span>
+                <span>
+                {usuarioItem.email?.replace(/[^\s@.]/g, "*")}
+                </span>
                 <small>
                   {usuarioItem.tipo === "PROFESSOR"
                     ? "Professor"
@@ -4149,31 +4403,52 @@ if (
       />
     </div>
 
-    <div className="admin-campo-professor">
-      <label htmlFor="admin-senha-professor">Senha inicial</label>
-      <input
-        id="admin-senha-professor"
-        type="password"
-        placeholder="Digite uma senha com pelo menos 6 caracteres"
-        value={senhaProfessorAdmin}
-        onChange={(e) => setSenhaProfessorAdmin(e.target.value)}
-        minLength={6}
-        required
-      />
-    </div>
-    <div className="admin-campo-professor">
+<div className="admin-campo-professor">
+  <label htmlFor="admin-senha-professor">Senha inicial</label>
+  <div className="admin-campo-senha">
+    <input
+      id="admin-senha-professor"
+      type={mostrarSenhaProfessorAdmin ? "text" : "password"}
+      placeholder="Digite uma senha com pelo menos 6 caracteres"
+      value={senhaProfessorAdmin}
+      onChange={(e) => setSenhaProfessorAdmin(e.target.value)}
+      minLength={6}
+      required
+    />
+    <button
+      type="button"
+      className="admin-botao-visualizar-senha"
+      onClick={() => setMostrarSenhaProfessorAdmin(!mostrarSenhaProfessorAdmin)}
+    >
+      {mostrarSenhaProfessorAdmin ? "Ocultar" : "Mostrar"}
+    </button>
+  </div>
+</div>
+
+<div className="admin-campo-professor">
   <label htmlFor="admin-confirmar-senha-professor">
     Confirmar senha
   </label>
-  <input
-    id="admin-confirmar-senha-professor"
-    type="password"
-    placeholder="Digite novamente a senha"
-    value={confirmarSenhaProfessorAdmin}
-    onChange={(e) => setConfirmarSenhaProfessorAdmin(e.target.value)}
-    minLength={6}
-    required
-  />
+  <div className="admin-campo-senha">
+    <input
+      id="admin-confirmar-senha-professor"
+      type={mostrarConfirmarSenhaProfessorAdmin ? "text" : "password"}
+      placeholder="Digite novamente a senha"
+      value={confirmarSenhaProfessorAdmin}
+      onChange={(e) => setConfirmarSenhaProfessorAdmin(e.target.value)}
+      minLength={6}
+      required
+    />
+    <button
+      type="button"
+      className="admin-botao-visualizar-senha"
+      onClick={() =>
+        setMostrarConfirmarSenhaProfessorAdmin(!mostrarConfirmarSenhaProfessorAdmin)
+      }
+    >
+      {mostrarConfirmarSenhaProfessorAdmin ? "Ocultar" : "Mostrar"}
+    </button>
+  </div>
 </div>
 
     {erroCadastroProfessorAdmin && (
@@ -4219,18 +4494,26 @@ if (
                 Aprendizagem personalizada
               </span>
             </div>
+  
+        <div className="usuario-menu">
+          <button
+            type="button"
+            className="usuario-perfil-botao"
+            onClick={() => setPaginaProfessor("perfil")}
+            aria-label="Abrir meu perfil"
+          >
+            <div className="avatar">
+              {usuario.nome?.charAt(0)?.toUpperCase() || "P"}
+            </div>
 
-            <div className="usuario-menu">
-              <div className="avatar">
-                {usuario.nome?.charAt(0)?.toUpperCase() || "P"}
-              </div>
+            <div className="usuario-info">
+              <strong>{usuario.nome}</strong>
+              <span>{usuario.email}</span>
+            </div>
+          </button>
 
-              <div className="usuario-info">
-                <strong>{usuario.nome}</strong>
-                <span>{usuario.email}</span>
-              </div>
+  <div className="links-legais-logado">
 
-              <div className="links-legais-logado">
   <button
     type="button"
     onClick={() => setModalLegal("termos")}
@@ -6032,8 +6315,22 @@ if (
   </table>
 </div>
 
-        </section>
-      ) : null}
+        </section>     
+
+) : paginaProfessor === "perfil" ? (
+  <>
+    <button
+      type="button"
+      className="professor-voltar"
+      onClick={() => setPaginaProfessor("painel")}
+    >
+      ← Voltar ao painel
+    </button>
+
+    {renderPerfil()}
+  </>
+) : null}
+
         </main>
 
         {renderModalLegal()}
@@ -6494,249 +6791,9 @@ if (
   </>
 )}
 
-{paginaAtiva === "perfil" && (
-  <section className="dashboard-academico">
-    <div className="dashboard-cabecalho">
-      <div>
-        <span className="secao-etiqueta">Configurações da conta</span>
-        <h1>Meu Perfil</h1>
-        <p>Gerencie suas informações pessoais e a segurança da sua conta.</p>
-      </div>
-    </div>
+{paginaAtiva === "perfil" && renderPerfil()}
 
-    <div className="perfil-informacoes">
-  <h2>Informações da Conta</h2>
-
-  <form onSubmit={salvarPerfil} className="perfil-formulario">
-    <label htmlFor="perfil-nome">Nome completo</label>
-    <input
-      id="perfil-nome"
-      type="text"
-      value={nomePerfil}
-      onChange={(event) => setNomePerfil(event.target.value)}
-      maxLength={100}
-      required
-    />
-
-    <label htmlFor="perfil-email">E-mail</label>
-    <input
-      id="perfil-email"
-      type="email"
-      value={emailPerfil}
-      onChange={(event) => setEmailPerfil(event.target.value)}
-      maxLength={150}
-      required
-    />
-
-    {erroPerfil && <p role="alert">{erroPerfil}</p>}
-    {mensagemPerfil && <p role="status">{mensagemPerfil}</p>}
-
-    <button type="submit" disabled={salvandoPerfil}>
-      {salvandoPerfil ? "Salvando..." : "Salvar alterações"}
-    </button>
-  </form>
-</div>
-<div className="perfil-informacoes">
-  <h2>Alterar Senha</h2>
-
-  <form onSubmit={alterarSenhaPerfil} className="perfil-formulario">
-    <label htmlFor="perfil-senha-atual">Senha atual</label>
-    <div className="perfil-campo-senha">
-      <input
-        id="perfil-senha-atual"
-        type={mostrarSenhaAtual ? "text" : "password"}
-        value={senhaAtualPerfil}
-        onChange={(event) => setSenhaAtualPerfil(event.target.value)}
-        autoComplete="current-password"
-        required
-      />
-      <button
-        type="button"
-        onClick={() => setMostrarSenhaAtual(!mostrarSenhaAtual)}
-        aria-label={mostrarSenhaAtual ? "Ocultar senha atual" : "Mostrar senha atual"}
-      >
-        {mostrarSenhaAtual ? "Ocultar" : "Mostrar"}
-      </button>
-    </div>
-
-    <label htmlFor="perfil-nova-senha">Nova senha</label>
-    <div className="perfil-campo-senha">
-      <input
-        id="perfil-nova-senha"
-        type={mostrarNovaSenha ? "text" : "password"}
-        value={novaSenhaPerfil}
-        onChange={(event) => setNovaSenhaPerfil(event.target.value)}
-        autoComplete="new-password"
-        minLength={8}
-        required
-      />
-      <button
-        type="button"
-        onClick={() => setMostrarNovaSenha(!mostrarNovaSenha)}
-        aria-label={mostrarNovaSenha ? "Ocultar nova senha" : "Mostrar nova senha"}
-      >
-        {mostrarNovaSenha ? "Ocultar" : "Mostrar"}
-      </button>
-    </div>
-
-    <label htmlFor="perfil-confirmar-senha">Confirmar nova senha</label>
-    <div className="perfil-campo-senha">
-      <input
-        id="perfil-confirmar-senha"
-        type={mostrarConfirmarSenha ? "text" : "password"}
-        value={confirmarSenhaPerfil}
-        onChange={(event) => setConfirmarSenhaPerfil(event.target.value)}
-        autoComplete="new-password"
-        minLength={8}
-        required
-      />
-      <button
-        type="button"
-        onClick={() => setMostrarConfirmarSenha(!mostrarConfirmarSenha)}
-        aria-label={mostrarConfirmarSenha ? "Ocultar confirmação" : "Mostrar confirmação"}
-      >
-        {mostrarConfirmarSenha ? "Ocultar" : "Mostrar"}
-      </button>
-    </div>
-
-    {erroSenhaPerfil && <p role="alert">{erroSenhaPerfil}</p>}
-    {mensagemSenhaPerfil && <p role="status">{mensagemSenhaPerfil}</p>}
-
-    <button type="submit" disabled={alterandoSenha}>
-      {alterandoSenha ? "Alterando..." : "Alterar senha"}
-    </button>
-  </form>
-</div>
-<div className="perfil-informacoes">
-  <h2>Excluir Conta</h2>
-
-  <p>
-    Ao excluir sua conta, suas informações pessoais,
-    histórico de avaliações e dados de aprendizagem
-    serão removidos permanentemente.
-  </p>
-
-  <button
-    type="button"
-    onClick={() => setConfirmacaoExclusaoAberta(true)}
-  >
-    Excluir minha conta
-  </button>
-</div>
-{confirmacaoExclusaoAberta && (
-  <div className="perfil-modal-overlay">
-    <div
-      className="perfil-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="titulo-confirmacao-exclusao"
-    >
-      <h2 id="titulo-confirmacao-exclusao">
-        Deseja realmente excluir sua conta?
-      </h2>
-
-      <p>
-        Essa ação é permanente e não poderá ser desfeita.
-        Seus dados pessoais e seu histórico de aprendizagem serão removidos.
-      </p>
-
-      <div className="perfil-modal-acoes">
-        <button
-          type="button"
-          onClick={() => setConfirmacaoExclusaoAberta(false)}
-        >
-          Cancelar
-        </button>
-
-        <button
-      type="button"
-      onClick={() => {
-        setConfirmacaoExclusaoAberta(false);
-        setSenhaExclusao("");
-        setMostrarSenhaExclusao(false);
-        setConfirmacaoSenhaExclusaoAberta(true);
-      }}
-    >
-      Sim, continuar
-    </button>
-      </div>
-    </div>
-  </div>
-)}
-
-{confirmacaoSenhaExclusaoAberta && (
-  <div className="perfil-modal-overlay">
-    <div
-      className="perfil-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="titulo-senha-exclusao"
-    >
-      <h2 id="titulo-senha-exclusao">
-        Confirmar exclusão da conta
-      </h2>
-
-      <p>
-        Para sua segurança, informe sua senha atual.
-        Esta ação é permanente e não poderá ser desfeita.
-      </p>
-
-      <div className="perfil-formulario">
-        <label htmlFor="senha-confirmacao-exclusao">
-          Senha atual
-        </label>
-
-        <div className="perfil-campo-senha">
-          <input
-            id="senha-confirmacao-exclusao"
-            type={mostrarSenhaExclusao ? "text" : "password"}
-            value={senhaExclusao}
-            onChange={(event) => setSenhaExclusao(event.target.value)}
-            autoComplete="current-password"
-            required
-          />
-
-          <button
-            type="button"
-            onClick={() => setMostrarSenhaExclusao(!mostrarSenhaExclusao)}
-          >
-            {mostrarSenhaExclusao ? "Ocultar" : "Mostrar"}
-          </button>
-        </div>
-      </div>
-{erroExclusao && (
-  <p role="alert" className="perfil-erro-exclusao">
-    {erroExclusao}
-  </p>
-)}
-      <div className="perfil-modal-acoes">
-        <button
-          type="button"
-          onClick={() => {
-            setConfirmacaoSenhaExclusaoAberta(false);
-            setSenhaExclusao("");
-            setMostrarSenhaExclusao(false);
-          }}
-        >
-          Cancelar
-        </button>
-
-        <button
-    type="button"
-    onClick={excluirContaPerfil}
-    disabled={!senhaExclusao.trim() || excluindoConta}
-  >
-    {excluindoConta ? "Excluindo..." : "Excluir definitivamente"}
-  </button>
-      </div>
-    </div>
-  </div>
-)}
-
-  </section>
-)}
-
-  {paginaAtiva === "dashboard" && (
+{paginaAtiva === "dashboard" && (
   <section className="dashboard-academico" id="dashboard">
     <div className="dashboard-cabecalho">
       <div>
@@ -8261,3 +8318,4 @@ if (
 );
 }
 export default App;
+

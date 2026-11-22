@@ -4800,6 +4800,42 @@ button.home-acao-card:hover {
   text-align: center;
 }
 
+.admin-campo-senha {
+  position: relative;
+  width: 100%;
+}
+
+.admin-campo-senha input {
+  width: 100%;
+  padding-right: 85px;
+  padding-left: 85px;
+}
+
+.admin-botao-visualizar-senha {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  padding: 5px 0;
+  background: transparent;
+  border: none;
+  color: #237348;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-botao-visualizar-senha:hover {
+  color: #185b38;
+  text-decoration: underline;
+}
+
+.admin-botao-visualizar-senha:focus-visible {
+  outline: 2px solid #237348;
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
 .admin-botao-cadastrar {
   align-self: center;
   width: 100%;
