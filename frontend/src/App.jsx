@@ -1135,6 +1135,197 @@ useEffect(() => {
   const [dashboardAberto, setDashboardAberto] = useState(false);
   const [paginaAtiva, setPaginaAtiva] = useState("dashboard");
 
+  const [nomePerfil, setNomePerfil] = useState("");
+  const [emailPerfil, setEmailPerfil] = useState("");
+  const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+  const [mensagemPerfil, setMensagemPerfil] = useState("");
+  const [erroPerfil, setErroPerfil] = useState("");
+
+  const [senhaAtualPerfil, setSenhaAtualPerfil] = useState("");
+  const [novaSenhaPerfil, setNovaSenhaPerfil] = useState("");
+  const [confirmarSenhaPerfil, setConfirmarSenhaPerfil] = useState("");
+
+  const [mostrarSenhaAtual, setMostrarSenhaAtual] = useState(false);
+  const [mostrarNovaSenha, setMostrarNovaSenha] = useState(false);
+  const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
+
+  const [alterandoSenha, setAlterandoSenha] = useState(false);
+  const [erroSenhaPerfil, setErroSenhaPerfil] = useState("");
+  const [mensagemSenhaPerfil, setMensagemSenhaPerfil] = useState("");
+
+  const [confirmacaoExclusaoAberta, setConfirmacaoExclusaoAberta] = useState(false);
+  const [confirmacaoSenhaExclusaoAberta, setConfirmacaoSenhaExclusaoAberta] = useState(false);
+  const [senhaExclusao, setSenhaExclusao] = useState("");
+  const [mostrarSenhaExclusao, setMostrarSenhaExclusao] = useState(false);
+  const [excluindoConta, setExcluindoConta] = useState(false);
+  const [erroExclusao, setErroExclusao] = useState("");
+
+  useEffect(() => {
+  if (paginaAtiva === "perfil" && usuario) {
+    setNomePerfil(usuario.nome || "");
+    setEmailPerfil(usuario.email || "");
+    setMensagemPerfil("");
+    setErroPerfil("");
+  }
+}, [paginaAtiva, usuario]);
+
+const salvarPerfil = async (event) => {
+  event.preventDefault();
+
+  setSalvandoPerfil(true);
+  setMensagemPerfil("");
+  setErroPerfil("");
+
+  try {
+    const tokenCsrf = document.cookie
+  .split("; ")
+  .find((cookie) => cookie.startsWith("XSRF-TOKEN="))
+  ?.split("=")[1];
+
+const resposta = await fetch("/api/auth/perfil", {
+  method: "PUT",
+  headers: {
+    "Content-Type": "application/json",
+    "X-XSRF-TOKEN": tokenCsrf ? decodeURIComponent(tokenCsrf) : "",
+  },
+      credentials: "include",
+      body: JSON.stringify({
+        nome: nomePerfil,
+        email: emailPerfil,
+      }),
+    });
+
+    const dados = await resposta.json();
+
+    if (!resposta.ok) {
+      throw new Error(dados.erro || "Não foi possível atualizar o perfil.");
+    }
+
+    setUsuario((anterior) => ({
+      ...anterior,
+      nome: dados.nome,
+      email: dados.email,
+    }));
+
+    setMensagemPerfil("Informações atualizadas com sucesso.");
+  } catch (erro) {
+    setErroPerfil(erro.message);
+  } finally {
+    setSalvandoPerfil(false);
+  }
+};
+
+const alterarSenhaPerfil = async (event) => {
+  event.preventDefault();
+
+  setErroSenhaPerfil("");
+  setMensagemSenhaPerfil("");
+
+  if (novaSenhaPerfil !== confirmarSenhaPerfil) {
+    setErroSenhaPerfil("A confirmação da senha não corresponde à nova senha.");
+    return;
+  }
+
+  if (novaSenhaPerfil.length < 8) {
+    setErroSenhaPerfil("A nova senha deve ter pelo menos 8 caracteres.");
+    return;
+  }
+
+  setAlterandoSenha(true);
+
+  try {
+    const tokenCsrf = document.cookie
+      .split("; ")
+      .find((cookie) => cookie.startsWith("XSRF-TOKEN="))
+      ?.split("=")[1];
+
+    const resposta = await fetch("/api/auth/alterar-senha", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-XSRF-TOKEN": tokenCsrf ? decodeURIComponent(tokenCsrf) : "",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        senhaAtual: senhaAtualPerfil,
+        novaSenha: novaSenhaPerfil,
+        confirmarSenha: confirmarSenhaPerfil,
+      }),
+    });
+
+    const dados = await resposta.json();
+
+    if (!resposta.ok) {
+      throw new Error(dados.erro || "Não foi possível alterar a senha.");
+    }
+
+    setSenhaAtualPerfil("");
+    setNovaSenhaPerfil("");
+    setConfirmarSenhaPerfil("");
+
+    setMostrarSenhaAtual(false);
+    setMostrarNovaSenha(false);
+    setMostrarConfirmarSenha(false);
+
+    setMensagemSenhaPerfil("Senha alterada com sucesso.");
+  } catch (erro) {
+    setErroSenhaPerfil(erro.message);
+  } finally {
+    setAlterandoSenha(false);
+  }
+};
+
+const excluirContaPerfil = async () => {
+  if (excluindoConta) return;
+
+  setErroExclusao("");
+
+  if (!senhaExclusao.trim()) {
+    setErroExclusao("Informe sua senha atual.");
+    return;
+  }
+
+  setExcluindoConta(true);
+
+  try {
+    const csrfToken = document.cookie
+      .split("; ")
+      .find((cookie) => cookie.startsWith("XSRF-TOKEN="))
+      ?.split("=")[1];
+
+    const resposta = await fetch("/api/auth/conta", {
+      method: "DELETE",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...(csrfToken
+          ? { "X-XSRF-TOKEN": decodeURIComponent(csrfToken) }
+          : {}),
+      },
+      body: JSON.stringify({
+        senhaAtual: senhaExclusao,
+      }),
+    });
+
+    const dados = await resposta.json();
+
+    if (!resposta.ok) {
+      throw new Error(dados.erro || "Não foi possível excluir sua conta.");
+    }
+
+    setSenhaExclusao("");
+    setMostrarSenhaExclusao(false);
+    setConfirmacaoSenhaExclusaoAberta(false);
+    setUsuario(null);
+    setPaginaAtiva("dashboard");
+  } catch (erro) {
+    setErroExclusao(erro.message || "Erro ao excluir a conta.");
+  } finally {
+    setExcluindoConta(false);
+  }
+};
+
+
   const [abaCentral, setAbaCentral] = useState("notificacoes");
   const [preferenciasNotificacoes, setPreferenciasNotificacoes] = useState({
   notificacoesAtivas: true,
@@ -2866,22 +3057,13 @@ function selecionarResposta(questaoId, alternativa) {
                 operações realizadas no sistema.
               </p>
 
-              <h3>4. Login com Google e GitHub</h3>
-
-              <p>
-                O SAP permite autenticação por meio do Google e do
-                GitHub. Nesses casos, podem ser recebidos dados
-                necessários à identificação da conta, como nome,
-                e-mail e identificador do provedor.
-              </p>
-
               <p>
                 O uso desses serviços também está sujeito às políticas
                 de privacidade e às condições estabelecidas pelos
                 respectivos provedores.
               </p>
 
-              <h3>5. Logs de auditoria</h3>
+              <h3>4. Logs de auditoria</h3>
 
               <p>
                 Para fins de segurança e rastreabilidade, o SAP mantém
@@ -2897,7 +3079,7 @@ function selecionarResposta(questaoId, alternativa) {
                 sucesso, logout e finalização de avaliações.
               </p>
 
-              <h3>6. Pesquisa de materiais externos</h3>
+              <h3>5. Pesquisa de materiais externos</h3>
 
               <p>
                 A funcionalidade "Materiais para estudo" utiliza a
@@ -2913,7 +3095,7 @@ function selecionarResposta(questaoId, alternativa) {
                 auditoria para realizar essa pesquisa.
               </p>
 
-              <h3>7. Armazenamento e segurança</h3>
+              <h3>6. Armazenamento e segurança</h3>
 
               <p>
                 Os dados necessários ao funcionamento do SAP são
@@ -2928,7 +3110,7 @@ function selecionarResposta(questaoId, alternativa) {
                 diretamente no código do frontend.
               </p>
 
-              <h3>8. Direitos do titular</h3>
+              <h3>7. Direitos do titular</h3>
 
               <p>
                 O titular dos dados pode solicitar informações sobre
@@ -2939,7 +3121,7 @@ function selecionarResposta(questaoId, alternativa) {
                 acadêmicas aplicáveis ao sistema.
               </p>
 
-              <h3>9. Transparência</h3>
+              <h3>8. Transparência</h3>
 
               <p>
                 Esta Política de Privacidade e os Termos de Uso
@@ -3562,30 +3744,6 @@ if (!usuario && paginaRecuperacao === "/esqueci-senha") {
                     : "Entrar no SAP"}
               </button>
             </form>
-
-            <div className="separador">
-              <span>ou continue com</span>
-            </div>
-
-            <div className="oauth-grid">
-              <button
-                className="botao-oauth"
-                type="button"
-                onClick={entrarComGoogle}
-              >
-                <GoogleIcon />
-                <span>Google</span>
-              </button>
-
-              <button
-                className="botao-oauth"
-                type="button"
-                onClick={entrarComGitHub}
-              >
-                <GitHubIcon />
-                <span>GitHub</span>
-              </button>
-            </div>
 
             <p className="auth-alternativa">
               {cadastro
@@ -6076,19 +6234,21 @@ if (
           </div>
 
           <div className="usuario-menu">
-            <div className="avatar">
-              {usuario.nome?.charAt(0)?.toUpperCase() || "U"}
-            </div>
+  <button
+    type="button"
+    className="usuario-perfil-botao"
+    onClick={() => setPaginaAtiva("perfil")}
+    aria-label="Abrir meu perfil"
+  >
+    <div className="avatar">
+      {usuario.nome?.charAt(0)?.toUpperCase() || "U"}
+    </div>
 
-            <div className="usuario-info">
-              <strong>
-                {usuario.nome}
-              </strong>
-
-              <span>
-                {usuario.email}
-              </span>
-            </div>
+    <div className="usuario-info">
+      <strong>{usuario.nome}</strong>
+      <span>{usuario.email}</span>
+    </div>
+  </button>
 
             <div className="links-legais-logado">
   <button
@@ -6333,6 +6493,249 @@ if (
 </section>
   </>
 )}
+
+{paginaAtiva === "perfil" && (
+  <section className="dashboard-academico">
+    <div className="dashboard-cabecalho">
+      <div>
+        <span className="secao-etiqueta">Configurações da conta</span>
+        <h1>Meu Perfil</h1>
+        <p>Gerencie suas informações pessoais e a segurança da sua conta.</p>
+      </div>
+    </div>
+
+    <div className="perfil-informacoes">
+  <h2>Informações da Conta</h2>
+
+  <form onSubmit={salvarPerfil} className="perfil-formulario">
+    <label htmlFor="perfil-nome">Nome completo</label>
+    <input
+      id="perfil-nome"
+      type="text"
+      value={nomePerfil}
+      onChange={(event) => setNomePerfil(event.target.value)}
+      maxLength={100}
+      required
+    />
+
+    <label htmlFor="perfil-email">E-mail</label>
+    <input
+      id="perfil-email"
+      type="email"
+      value={emailPerfil}
+      onChange={(event) => setEmailPerfil(event.target.value)}
+      maxLength={150}
+      required
+    />
+
+    {erroPerfil && <p role="alert">{erroPerfil}</p>}
+    {mensagemPerfil && <p role="status">{mensagemPerfil}</p>}
+
+    <button type="submit" disabled={salvandoPerfil}>
+      {salvandoPerfil ? "Salvando..." : "Salvar alterações"}
+    </button>
+  </form>
+</div>
+<div className="perfil-informacoes">
+  <h2>Alterar Senha</h2>
+
+  <form onSubmit={alterarSenhaPerfil} className="perfil-formulario">
+    <label htmlFor="perfil-senha-atual">Senha atual</label>
+    <div className="perfil-campo-senha">
+      <input
+        id="perfil-senha-atual"
+        type={mostrarSenhaAtual ? "text" : "password"}
+        value={senhaAtualPerfil}
+        onChange={(event) => setSenhaAtualPerfil(event.target.value)}
+        autoComplete="current-password"
+        required
+      />
+      <button
+        type="button"
+        onClick={() => setMostrarSenhaAtual(!mostrarSenhaAtual)}
+        aria-label={mostrarSenhaAtual ? "Ocultar senha atual" : "Mostrar senha atual"}
+      >
+        {mostrarSenhaAtual ? "Ocultar" : "Mostrar"}
+      </button>
+    </div>
+
+    <label htmlFor="perfil-nova-senha">Nova senha</label>
+    <div className="perfil-campo-senha">
+      <input
+        id="perfil-nova-senha"
+        type={mostrarNovaSenha ? "text" : "password"}
+        value={novaSenhaPerfil}
+        onChange={(event) => setNovaSenhaPerfil(event.target.value)}
+        autoComplete="new-password"
+        minLength={8}
+        required
+      />
+      <button
+        type="button"
+        onClick={() => setMostrarNovaSenha(!mostrarNovaSenha)}
+        aria-label={mostrarNovaSenha ? "Ocultar nova senha" : "Mostrar nova senha"}
+      >
+        {mostrarNovaSenha ? "Ocultar" : "Mostrar"}
+      </button>
+    </div>
+
+    <label htmlFor="perfil-confirmar-senha">Confirmar nova senha</label>
+    <div className="perfil-campo-senha">
+      <input
+        id="perfil-confirmar-senha"
+        type={mostrarConfirmarSenha ? "text" : "password"}
+        value={confirmarSenhaPerfil}
+        onChange={(event) => setConfirmarSenhaPerfil(event.target.value)}
+        autoComplete="new-password"
+        minLength={8}
+        required
+      />
+      <button
+        type="button"
+        onClick={() => setMostrarConfirmarSenha(!mostrarConfirmarSenha)}
+        aria-label={mostrarConfirmarSenha ? "Ocultar confirmação" : "Mostrar confirmação"}
+      >
+        {mostrarConfirmarSenha ? "Ocultar" : "Mostrar"}
+      </button>
+    </div>
+
+    {erroSenhaPerfil && <p role="alert">{erroSenhaPerfil}</p>}
+    {mensagemSenhaPerfil && <p role="status">{mensagemSenhaPerfil}</p>}
+
+    <button type="submit" disabled={alterandoSenha}>
+      {alterandoSenha ? "Alterando..." : "Alterar senha"}
+    </button>
+  </form>
+</div>
+<div className="perfil-informacoes">
+  <h2>Excluir Conta</h2>
+
+  <p>
+    Ao excluir sua conta, suas informações pessoais,
+    histórico de avaliações e dados de aprendizagem
+    serão removidos permanentemente.
+  </p>
+
+  <button
+    type="button"
+    onClick={() => setConfirmacaoExclusaoAberta(true)}
+  >
+    Excluir minha conta
+  </button>
+</div>
+{confirmacaoExclusaoAberta && (
+  <div className="perfil-modal-overlay">
+    <div
+      className="perfil-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="titulo-confirmacao-exclusao"
+    >
+      <h2 id="titulo-confirmacao-exclusao">
+        Deseja realmente excluir sua conta?
+      </h2>
+
+      <p>
+        Essa ação é permanente e não poderá ser desfeita.
+        Seus dados pessoais e seu histórico de aprendizagem serão removidos.
+      </p>
+
+      <div className="perfil-modal-acoes">
+        <button
+          type="button"
+          onClick={() => setConfirmacaoExclusaoAberta(false)}
+        >
+          Cancelar
+        </button>
+
+        <button
+      type="button"
+      onClick={() => {
+        setConfirmacaoExclusaoAberta(false);
+        setSenhaExclusao("");
+        setMostrarSenhaExclusao(false);
+        setConfirmacaoSenhaExclusaoAberta(true);
+      }}
+    >
+      Sim, continuar
+    </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{confirmacaoSenhaExclusaoAberta && (
+  <div className="perfil-modal-overlay">
+    <div
+      className="perfil-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="titulo-senha-exclusao"
+    >
+      <h2 id="titulo-senha-exclusao">
+        Confirmar exclusão da conta
+      </h2>
+
+      <p>
+        Para sua segurança, informe sua senha atual.
+        Esta ação é permanente e não poderá ser desfeita.
+      </p>
+
+      <div className="perfil-formulario">
+        <label htmlFor="senha-confirmacao-exclusao">
+          Senha atual
+        </label>
+
+        <div className="perfil-campo-senha">
+          <input
+            id="senha-confirmacao-exclusao"
+            type={mostrarSenhaExclusao ? "text" : "password"}
+            value={senhaExclusao}
+            onChange={(event) => setSenhaExclusao(event.target.value)}
+            autoComplete="current-password"
+            required
+          />
+
+          <button
+            type="button"
+            onClick={() => setMostrarSenhaExclusao(!mostrarSenhaExclusao)}
+          >
+            {mostrarSenhaExclusao ? "Ocultar" : "Mostrar"}
+          </button>
+        </div>
+      </div>
+{erroExclusao && (
+  <p role="alert" className="perfil-erro-exclusao">
+    {erroExclusao}
+  </p>
+)}
+      <div className="perfil-modal-acoes">
+        <button
+          type="button"
+          onClick={() => {
+            setConfirmacaoSenhaExclusaoAberta(false);
+            setSenhaExclusao("");
+            setMostrarSenhaExclusao(false);
+          }}
+        >
+          Cancelar
+        </button>
+
+        <button
+    type="button"
+    onClick={excluirContaPerfil}
+    disabled={!senhaExclusao.trim() || excluindoConta}
+  >
+    {excluindoConta ? "Excluindo..." : "Excluir definitivamente"}
+  </button>
+      </div>
+    </div>
+  </div>
+)}
+
+  </section>
+)}
+
   {paginaAtiva === "dashboard" && (
   <section className="dashboard-academico" id="dashboard">
     <div className="dashboard-cabecalho">

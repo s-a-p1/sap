@@ -26,6 +26,7 @@ public interface TokenRecuperacaoSenhaRepository
     List<TokenRecuperacaoSenha> findByUsuarioIdAndDataUtilizacaoIsNull(
             Long usuarioId
     );
+    List<TokenRecuperacaoSenha> findByUsuarioId(Long usuarioId);
 
         boolean existsByUsuarioIdAndDataCriacaoAfter(
                 Long usuarioId,

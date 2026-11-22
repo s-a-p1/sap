@@ -22,6 +22,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -235,6 +236,167 @@ public class AuthController {
                 )
         );
     }
+@PutMapping("/perfil")
+public ResponseEntity<?> atualizarPerfil(
+        @RequestBody Map<String, String> dados,
+        Authentication authentication,
+        HttpServletRequest request) {
+
+    Optional<Usuario> usuarioEncontrado =
+            buscarUsuarioAutenticado(authentication);
+
+    if (usuarioEncontrado.isEmpty()) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("erro", "Usuário não autenticado."));
+    }
+
+    Usuario usuarioAtual = usuarioEncontrado.get();
+
+    String emailAnterior = usuarioAtual.getEmail();
+
+    try {
+        Usuario usuarioAtualizado = usuarioService.atualizarPerfil(
+                usuarioAtual.getId(),
+                dados.get("nome"),
+                dados.get("email")
+        );
+
+        if (!emailAnterior.equals(usuarioAtualizado.getEmail())) {
+            Authentication novaAutenticacao =
+                    new UsernamePasswordAuthenticationToken(
+                            User.withUsername(usuarioAtualizado.getEmail())
+                                    .password(usuarioAtualizado.getSenha())
+                                    .authorities(authentication.getAuthorities())
+                                    .build(),
+                            null,
+                            authentication.getAuthorities()
+                    );
+
+            SecurityContext contexto =
+                    SecurityContextHolder.createEmptyContext();
+
+            contexto.setAuthentication(novaAutenticacao);
+            SecurityContextHolder.setContext(contexto);
+
+            request.getSession(true).setAttribute(
+                    "SPRING_SECURITY_CONTEXT",
+                    contexto
+            );
+        }
+
+        auditoriaService.registrar(
+                usuarioAtualizado.getId(),
+                usuarioAtualizado.getEmail(),
+                "ATUALIZACAO_PERFIL",
+                "Informações da conta atualizadas."
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "mensagem", "Perfil atualizado com sucesso.",
+                "id", usuarioAtualizado.getId(),
+                "nome", usuarioAtualizado.getNome(),
+                "email", usuarioAtualizado.getEmail(),
+                "tipo", usuarioAtualizado.getTipo()
+        ));
+
+    } catch (IllegalArgumentException e) {
+        return ResponseEntity.badRequest()
+                .body(Map.of("erro", e.getMessage()));
+    }
+}
+@PutMapping("/alterar-senha")
+public ResponseEntity<?> alterarSenha(
+        @RequestBody Map<String, String> dados,
+        Authentication authentication) {
+
+    Optional<Usuario> usuarioEncontrado =
+            buscarUsuarioAutenticado(authentication);
+
+    if (usuarioEncontrado.isEmpty()) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of(
+                        "erro", "Usuário não autenticado."
+                ));
+    }
+
+    String senhaAtual = dados.get("senhaAtual");
+    String novaSenha = dados.get("novaSenha");
+    String confirmarSenha = dados.get("confirmarSenha");
+
+    if (novaSenha == null || !novaSenha.equals(confirmarSenha)) {
+        return ResponseEntity.badRequest()
+                .body(Map.of(
+                        "erro", "A confirmação da senha não corresponde à nova senha."
+                ));
+    }
+
+    Usuario usuario = usuarioEncontrado.get();
+
+    try {
+        usuarioService.alterarSenha(
+                usuario.getId(),
+                senhaAtual,
+                novaSenha
+        );
+
+        auditoriaService.registrar(
+                usuario.getId(),
+                usuario.getEmail(),
+                "ALTERACAO_SENHA",
+                "Senha da conta alterada com sucesso."
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "mensagem", "Senha alterada com sucesso."
+        ));
+
+    } catch (IllegalArgumentException e) {
+        return ResponseEntity.badRequest()
+                .body(Map.of(
+                        "erro", e.getMessage()
+                ));
+    }
+}
+
+@DeleteMapping("/conta")
+public ResponseEntity<?> excluirConta(
+        @RequestBody Map<String, String> dados,
+        Authentication authentication,
+        HttpServletRequest request) {
+
+    Optional<Usuario> usuarioEncontrado =
+            buscarUsuarioAutenticado(authentication);
+
+    if (usuarioEncontrado.isEmpty()) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of(
+                        "erro", "Usuário não autenticado."
+                ));
+    }
+
+    Usuario usuario = usuarioEncontrado.get();
+    String senhaAtual = dados.get("senhaAtual");
+
+    try {
+        usuarioService.excluirConta(usuario.getId(), senhaAtual);
+
+        if (request.getSession(false) != null) {
+            request.getSession(false).invalidate();
+        }
+
+        SecurityContextHolder.clearContext();
+
+        return ResponseEntity.ok(Map.of(
+                "mensagem", "Conta excluída com sucesso."
+        ));
+
+    } catch (IllegalArgumentException e) {
+        return ResponseEntity.badRequest()
+                .body(Map.of(
+                        "erro", e.getMessage()
+                ));
+    }
+}
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(
