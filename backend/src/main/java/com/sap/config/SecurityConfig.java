@@ -5,6 +5,7 @@ import com.sap.service.CustomUserDetailsService;
 
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -30,6 +31,9 @@ import java.util.List;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    @Value("${FRONTEND_URL:http://localhost:5173}")
+    private String frontendUrl;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -172,7 +176,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(
-                List.of("http://localhost:5173")
+                List.of(frontendUrl)
         );
 
         configuration.setAllowedMethods(
