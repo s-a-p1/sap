@@ -5,7 +5,7 @@
       "destination": "https://pfc-sap26.duckdns.org/api/:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
