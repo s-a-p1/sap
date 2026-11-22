@@ -449,67 +449,6 @@ button:disabled {
   color: #16723a;
 }
 
-.separador {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 25px 0 18px;
-  color: #9aa3b2;
-  font-size: 12px;
-}
-
-.separador::before,
-.separador::after {
-  content: "";
-  height: 1px;
-  flex: 1;
-  background: #e8ebf1;
-}
-
-.oauth-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.botao-oauth {
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  border: 1px solid #dfe4ed;
-  border-radius: 12px;
-  background: white;
-  color: #35405a;
-  font-weight: 750;
-  transition:
-    border-color 0.2s ease,
-    background 0.2s ease,
-    transform 0.2s ease;
-}
-
-.botao-oauth:hover {
-  transform: translateY(-1px);
-  border-color: #86efac;
-  background: #f0fdf4;
-}
-
-.oauth-icon {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 20px;
-  display: block;
-}
-
-.github-svg {
-  color: #181717;
-}
-
-.botao-oauth span {
-  line-height: 1;
-}
-
 .auth-alternativa {
   margin: 24px 0 0;
   text-align: center;
@@ -1001,10 +940,6 @@ button:disabled {
 
   .auth-cabecalho h2 {
     font-size: 27px;
-  }
-
-  .oauth-grid {
-    grid-template-columns: 1fr;
   }
 
   .aceite-termos {
@@ -7010,6 +6945,50 @@ button.home-acao-card:hover {
   }
 
   .perfil-modal .perfil-modal-acoes button {
+    width: 100%;
+  }
+}
+.resultado-card .resultado-intro {
+  max-width: 650px;
+  margin: 0 auto;
+  text-align: center;
+  line-height: 1.7;
+}
+
+.resultado-card .resultado-acoes {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 28px;
+}
+
+.resultado-card .resultado-acoes .botao-voltar-avaliacoes,
+.resultado-card .resultado-acoes .botao-refazer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 205px;
+  min-height: 50px;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: center;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .resultado-card .resultado-acoes {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .resultado-card .resultado-acoes .botao-voltar-avaliacoes,
+  .resultado-card .resultado-acoes .botao-refazer {
     width: 100%;
   }
 }

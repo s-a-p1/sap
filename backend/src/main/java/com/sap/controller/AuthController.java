@@ -1,15 +1,20 @@
+
 package com.sap.controller;
 
 import com.sap.dto.AceiteTermosRequest;
+import com.sap.dto.AlterarSenhaRequest;
+import com.sap.dto.AtualizarPerfilRequest;
 import com.sap.dto.CadastroUsuarioRequest;
+import com.sap.dto.ExcluirContaRequest;
 import com.sap.dto.LoginRequest;
-import com.sap.model.ProvedorAutenticacao;
 import com.sap.model.Usuario;
 import com.sap.repository.UsuarioRepository;
 import com.sap.service.AuditoriaService;
+import com.sap.service.CustomUserDetailsService;
 import com.sap.service.UsuarioService;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
@@ -20,9 +25,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -37,17 +40,20 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final UsuarioRepository usuarioRepository;
     private final AuditoriaService auditoriaService;
+    private final CustomUserDetailsService customUserDetailsService;
 
     public AuthController(
             UsuarioService usuarioService,
             AuthenticationManager authenticationManager,
             UsuarioRepository usuarioRepository,
-            AuditoriaService auditoriaService) {
+            AuditoriaService auditoriaService,
+            CustomUserDetailsService customUserDetailsService) {
 
         this.usuarioService = usuarioService;
         this.authenticationManager = authenticationManager;
         this.usuarioRepository = usuarioRepository;
         this.auditoriaService = auditoriaService;
+        this.customUserDetailsService = customUserDetailsService;
     }
 
     @PostMapping("/cadastro")
@@ -76,12 +82,8 @@ public class AuthController {
             );
 
         } catch (IllegalArgumentException e) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(Map.of(
-                            "erro",
-                            e.getMessage()
-                    ));
+            return ResponseEntity.badRequest()
+                    .body(Map.of("erro", e.getMessage()));
         }
     }
 
@@ -108,21 +110,17 @@ public class AuthController {
             securityContext.setAuthentication(authentication);
             SecurityContextHolder.setContext(securityContext);
 
-            httpRequest.getSession(true)
-                    .setAttribute(
-                            "SPRING_SECURITY_CONTEXT",
-                            securityContext
-                    );
+            httpRequest.getSession(true).setAttribute(
+                    "SPRING_SECURITY_CONTEXT",
+                    securityContext
+            );
 
             Optional<Usuario> usuarioEncontrado =
                     usuarioRepository.findByEmail(emailNormalizado);
 
             if (usuarioEncontrado.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of(
-                                "erro",
-                                "Usuário não encontrado."
-                        ));
+                        .body(Map.of("erro", "Usuário não encontrado."));
             }
 
             Usuario usuario = usuarioEncontrado.get();
@@ -160,10 +158,7 @@ public class AuthController {
             );
 
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of(
-                            "erro",
-                            "E-mail ou senha inválidos."
-                    ));
+                    .body(Map.of("erro", "E-mail ou senha inválidos."));
         }
     }
 
@@ -206,10 +201,7 @@ public class AuthController {
 
         if (usuarioEncontrado.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of(
-                            "erro",
-                            "Usuário não autenticado."
-                    ));
+                    .body(Map.of("erro", "Usuário não autenticado."));
         }
 
         Usuario usuario = usuarioEncontrado.get();
@@ -229,174 +221,11 @@ public class AuthController {
 
         return ResponseEntity.ok(
                 Map.of(
-                        "mensagem",
-                        "Termos aceitos com sucesso.",
-                        "aceitouTermos",
-                        usuario.isAceitouTermos()
+                        "mensagem", "Termos aceitos com sucesso.",
+                        "aceitouTermos", usuario.isAceitouTermos()
                 )
         );
     }
-@PutMapping("/perfil")
-public ResponseEntity<?> atualizarPerfil(
-        @RequestBody Map<String, String> dados,
-        Authentication authentication,
-        HttpServletRequest request) {
-
-    Optional<Usuario> usuarioEncontrado =
-            buscarUsuarioAutenticado(authentication);
-
-    if (usuarioEncontrado.isEmpty()) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("erro", "Usuário não autenticado."));
-    }
-
-    Usuario usuarioAtual = usuarioEncontrado.get();
-
-    String emailAnterior = usuarioAtual.getEmail();
-
-    try {
-        Usuario usuarioAtualizado = usuarioService.atualizarPerfil(
-                usuarioAtual.getId(),
-                dados.get("nome"),
-                dados.get("email")
-        );
-
-        if (!emailAnterior.equals(usuarioAtualizado.getEmail())) {
-            Authentication novaAutenticacao =
-                    new UsernamePasswordAuthenticationToken(
-                            User.withUsername(usuarioAtualizado.getEmail())
-                                    .password(usuarioAtualizado.getSenha())
-                                    .authorities(authentication.getAuthorities())
-                                    .build(),
-                            null,
-                            authentication.getAuthorities()
-                    );
-
-            SecurityContext contexto =
-                    SecurityContextHolder.createEmptyContext();
-
-            contexto.setAuthentication(novaAutenticacao);
-            SecurityContextHolder.setContext(contexto);
-
-            request.getSession(true).setAttribute(
-                    "SPRING_SECURITY_CONTEXT",
-                    contexto
-            );
-        }
-
-        auditoriaService.registrar(
-                usuarioAtualizado.getId(),
-                usuarioAtualizado.getEmail(),
-                "ATUALIZACAO_PERFIL",
-                "Informações da conta atualizadas."
-        );
-
-        return ResponseEntity.ok(Map.of(
-                "mensagem", "Perfil atualizado com sucesso.",
-                "id", usuarioAtualizado.getId(),
-                "nome", usuarioAtualizado.getNome(),
-                "email", usuarioAtualizado.getEmail(),
-                "tipo", usuarioAtualizado.getTipo()
-        ));
-
-    } catch (IllegalArgumentException e) {
-        return ResponseEntity.badRequest()
-                .body(Map.of("erro", e.getMessage()));
-    }
-}
-@PutMapping("/alterar-senha")
-public ResponseEntity<?> alterarSenha(
-        @RequestBody Map<String, String> dados,
-        Authentication authentication) {
-
-    Optional<Usuario> usuarioEncontrado =
-            buscarUsuarioAutenticado(authentication);
-
-    if (usuarioEncontrado.isEmpty()) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of(
-                        "erro", "Usuário não autenticado."
-                ));
-    }
-
-    String senhaAtual = dados.get("senhaAtual");
-    String novaSenha = dados.get("novaSenha");
-    String confirmarSenha = dados.get("confirmarSenha");
-
-    if (novaSenha == null || !novaSenha.equals(confirmarSenha)) {
-        return ResponseEntity.badRequest()
-                .body(Map.of(
-                        "erro", "A confirmação da senha não corresponde à nova senha."
-                ));
-    }
-
-    Usuario usuario = usuarioEncontrado.get();
-
-    try {
-        usuarioService.alterarSenha(
-                usuario.getId(),
-                senhaAtual,
-                novaSenha
-        );
-
-        auditoriaService.registrar(
-                usuario.getId(),
-                usuario.getEmail(),
-                "ALTERACAO_SENHA",
-                "Senha da conta alterada com sucesso."
-        );
-
-        return ResponseEntity.ok(Map.of(
-                "mensagem", "Senha alterada com sucesso."
-        ));
-
-    } catch (IllegalArgumentException e) {
-        return ResponseEntity.badRequest()
-                .body(Map.of(
-                        "erro", e.getMessage()
-                ));
-    }
-}
-
-@DeleteMapping("/conta")
-public ResponseEntity<?> excluirConta(
-        @RequestBody Map<String, String> dados,
-        Authentication authentication,
-        HttpServletRequest request) {
-
-    Optional<Usuario> usuarioEncontrado =
-            buscarUsuarioAutenticado(authentication);
-
-    if (usuarioEncontrado.isEmpty()) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of(
-                        "erro", "Usuário não autenticado."
-                ));
-    }
-
-    Usuario usuario = usuarioEncontrado.get();
-    String senhaAtual = dados.get("senhaAtual");
-
-    try {
-        usuarioService.excluirConta(usuario.getId(), senhaAtual);
-
-        if (request.getSession(false) != null) {
-            request.getSession(false).invalidate();
-        }
-
-        SecurityContextHolder.clearContext();
-
-        return ResponseEntity.ok(Map.of(
-                "mensagem", "Conta excluída com sucesso."
-        ));
-
-    } catch (IllegalArgumentException e) {
-        return ResponseEntity.badRequest()
-                .body(Map.of(
-                        "erro", e.getMessage()
-                ));
-    }
-}
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(
@@ -415,18 +244,171 @@ public ResponseEntity<?> excluirConta(
                 )
         );
 
-        if (request.getSession(false) != null) {
-            request.getSession(false).invalidate();
+        HttpSession session = request.getSession(false);
+
+        if (session != null) {
+            session.invalidate();
         }
 
         SecurityContextHolder.clearContext();
 
         return ResponseEntity.ok(
-                Map.of(
-                        "mensagem",
-                        "Logout realizado com sucesso."
-                )
+                Map.of("mensagem", "Logout realizado com sucesso.")
         );
+    }
+
+    @PutMapping("/perfil")
+    public ResponseEntity<?> atualizarPerfil(
+            @RequestBody AtualizarPerfilRequest request,
+            Authentication authentication,
+            HttpServletRequest httpRequest) {
+
+        Optional<Usuario> usuarioEncontrado =
+                buscarUsuarioAutenticado(authentication);
+
+        if (usuarioEncontrado.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("erro", "Usuário não autenticado."));
+        }
+
+        try {
+            Usuario usuario = usuarioService.atualizarPerfil(
+                    usuarioEncontrado.get().getId(),
+                    request.nome(),
+                    request.email()
+            );
+
+            UserDetails userDetails =
+                    customUserDetailsService.loadUserByUsername(
+                            usuario.getEmail()
+                    );
+
+            Authentication novaAutenticacao =
+                    new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
+
+            SecurityContext novoContexto =
+                    SecurityContextHolder.createEmptyContext();
+
+            novoContexto.setAuthentication(novaAutenticacao);
+            SecurityContextHolder.setContext(novoContexto);
+
+            httpRequest.getSession(true).setAttribute(
+                    "SPRING_SECURITY_CONTEXT",
+                    novoContexto
+            );
+
+            auditoriaService.registrar(
+                    usuario.getId(),
+                    usuario.getEmail(),
+                    "ATUALIZACAO_PERFIL",
+                    "Usuário atualizou seus dados de perfil."
+            );
+
+            return ResponseEntity.ok(
+                    Map.of(
+                            "id", usuario.getId(),
+                            "nome", usuario.getNome(),
+                            "email", usuario.getEmail(),
+                            "tipo", usuario.getTipo()
+                    )
+            );
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("erro", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/alterar-senha")
+    public ResponseEntity<?> alterarSenha(
+            @RequestBody AlterarSenhaRequest request,
+            Authentication authentication) {
+
+        Optional<Usuario> usuarioEncontrado =
+                buscarUsuarioAutenticado(authentication);
+
+        if (usuarioEncontrado.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("erro", "Usuário não autenticado."));
+        }
+
+        if (request.novaSenha() == null
+                || !request.novaSenha().equals(request.confirmarSenha())) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of(
+                            "erro",
+                            "A confirmação da senha não corresponde à nova senha."
+                    ));
+        }
+
+        try {
+            Usuario usuario = usuarioEncontrado.get();
+
+            usuarioService.alterarSenha(
+                    usuario.getId(),
+                    request.senhaAtual(),
+                    request.novaSenha()
+            );
+
+            auditoriaService.registrar(
+                    usuario.getId(),
+                    usuario.getEmail(),
+                    "ALTERACAO_SENHA",
+                    "Usuário alterou sua senha."
+            );
+
+            return ResponseEntity.ok(
+                    Map.of("mensagem", "Senha alterada com sucesso.")
+            );
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("erro", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/conta")
+    public ResponseEntity<?> excluirConta(
+            @RequestBody ExcluirContaRequest request,
+            Authentication authentication,
+            HttpServletRequest httpRequest) {
+
+        Optional<Usuario> usuarioEncontrado =
+                buscarUsuarioAutenticado(authentication);
+
+        if (usuarioEncontrado.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("erro", "Usuário não autenticado."));
+        }
+
+        try {
+            Usuario usuario = usuarioEncontrado.get();
+
+            usuarioService.excluirConta(
+                    usuario.getId(),
+                    request.senhaAtual()
+            );
+
+            HttpSession session = httpRequest.getSession(false);
+
+            if (session != null) {
+                session.invalidate();
+            }
+
+            SecurityContextHolder.clearContext();
+
+            return ResponseEntity.ok(
+                    Map.of("mensagem", "Conta excluída com sucesso.")
+            );
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("erro", e.getMessage()));
+        }
     }
 
     private Optional<Usuario> buscarUsuarioAutenticado(
@@ -434,55 +416,11 @@ public ResponseEntity<?> excluirConta(
 
         if (authentication == null
                 || !authentication.isAuthenticated()) {
-
             return Optional.empty();
         }
 
-        if (authentication
-                instanceof OAuth2AuthenticationToken oauthToken) {
-
-            String registrationId =
-                    oauthToken.getAuthorizedClientRegistrationId();
-
-            OAuth2User oauth2User =
-                    oauthToken.getPrincipal();
-
-            if ("github".equalsIgnoreCase(registrationId)) {
-
-                Object idAttribute =
-                        oauth2User.getAttribute("id");
-
-                if (idAttribute == null) {
-                    return Optional.empty();
-                }
-
-                return usuarioRepository
-                        .findByProvedorAndProvedorId(
-                                ProvedorAutenticacao.GITHUB,
-                                idAttribute.toString()
-                        );
-            }
-
-            if ("google".equalsIgnoreCase(registrationId)) {
-
-                Object subAttribute =
-                        oauth2User.getAttribute("sub");
-
-                if (subAttribute == null) {
-                    return Optional.empty();
-                }
-
-                return usuarioRepository
-                        .findByProvedorAndProvedorId(
-                                ProvedorAutenticacao.GOOGLE,
-                                subAttribute.toString()
-                        );
-            }
-
-            return Optional.empty();
-        }
-
-        return usuarioRepository
-                .findByEmail(authentication.getName());
+        return usuarioRepository.findByEmail(
+                authentication.getName()
+        );
     }
 }

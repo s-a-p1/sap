@@ -3,22 +3,18 @@ package com.sap.controller;
 
 import com.sap.dto.FinalizarAvaliacaoRequest;
 import com.sap.dto.ResultadoAvaliacaoResponse;
-import com.sap.model.ProvedorAutenticacao;
 import com.sap.model.Usuario;
 import com.sap.repository.UsuarioRepository;
 import com.sap.service.CorrecaoAvaliacaoService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -35,10 +31,12 @@ class CorrecaoAvaliacaoControllerTest {
     void configurar() {
         correcaoAvaliacaoService = mock(CorrecaoAvaliacaoService.class);
         usuarioRepository = mock(UsuarioRepository.class);
+
         controller = new CorrecaoAvaliacaoController(
                 correcaoAvaliacaoService,
                 usuarioRepository
         );
+
         request = mock(FinalizarAvaliacaoRequest.class);
     }
 
@@ -106,6 +104,7 @@ class CorrecaoAvaliacaoControllerTest {
 
         assertSame(resultado, resposta);
 
+        verify(usuarioRepository).findByEmail("teste@email.com");
         verify(correcaoAvaliacaoService).corrigir(request, usuario);
     }
 
@@ -127,20 +126,16 @@ class CorrecaoAvaliacaoControllerTest {
         assertSame(resultado, resposta);
 
         verify(usuarioRepository).findByEmail("teste@email.com");
+        verify(correcaoAvaliacaoService).corrigir(request, usuario);
     }
 
     @Test
-    void deveFinalizarAvaliacaoComGitHub() {
-        Authentication authentication = autenticacaoOAuth(
-                "github",
-                Map.of("id", 12345)
-        );
-
+    void deveAceitarEmailComLetrasMaiusculas() {
+        Authentication authentication = autenticacaoLocal("USUARIO@EMAIL.COM");
         Usuario usuario = mock(Usuario.class);
         ResultadoAvaliacaoResponse resultado = mock(ResultadoAvaliacaoResponse.class);
 
-        when(usuarioRepository.findByProvedorAndProvedorId(
-                ProvedorAutenticacao.GITHUB, "12345"))
+        when(usuarioRepository.findByEmail("usuario@email.com"))
                 .thenReturn(Optional.of(usuario));
 
         when(correcaoAvaliacaoService.corrigir(request, usuario))
@@ -151,60 +146,14 @@ class CorrecaoAvaliacaoControllerTest {
 
         assertSame(resultado, resposta);
 
-        verify(usuarioRepository).findByProvedorAndProvedorId(
-                ProvedorAutenticacao.GITHUB, "12345"
-        );
+        verify(usuarioRepository).findByEmail("usuario@email.com");
     }
 
     @Test
-    void deveAceitarGitHubComNomeMaiusculo() {
-        Authentication authentication = autenticacaoOAuth(
-                "GITHUB",
-                Map.of("id", "98765")
-        );
+    void deveNegarUsuarioNaoEncontradoComEmailMaiusculo() {
+        Authentication authentication = autenticacaoLocal("INEXISTENTE@EMAIL.COM");
 
-        Usuario usuario = mock(Usuario.class);
-        ResultadoAvaliacaoResponse resultado = mock(ResultadoAvaliacaoResponse.class);
-
-        when(usuarioRepository.findByProvedorAndProvedorId(
-                ProvedorAutenticacao.GITHUB, "98765"))
-                .thenReturn(Optional.of(usuario));
-
-        when(correcaoAvaliacaoService.corrigir(request, usuario))
-                .thenReturn(resultado);
-
-        assertSame(
-                resultado,
-                controller.finalizar(request, authentication)
-        );
-    }
-
-    @Test
-    void deveNegarGitHubSemIdentificador() {
-        Authentication authentication = autenticacaoOAuth(
-                "github",
-                Map.of("login", "usuario")
-        );
-
-        ResponseStatusException erro = assertThrows(
-                ResponseStatusException.class,
-                () -> controller.finalizar(request, authentication)
-        );
-
-        assertEquals(HttpStatus.UNAUTHORIZED, erro.getStatusCode());
-
-        verifyNoInteractions(usuarioRepository, correcaoAvaliacaoService);
-    }
-
-    @Test
-    void deveNegarGitHubQuandoUsuarioNaoExiste() {
-        Authentication authentication = autenticacaoOAuth(
-                "github",
-                Map.of("id", 12345)
-        );
-
-        when(usuarioRepository.findByProvedorAndProvedorId(
-                ProvedorAutenticacao.GITHUB, "12345"))
+        when(usuarioRepository.findByEmail("inexistente@email.com"))
                 .thenReturn(Optional.empty());
 
         ResponseStatusException erro = assertThrows(
@@ -214,112 +163,8 @@ class CorrecaoAvaliacaoControllerTest {
 
         assertEquals(HttpStatus.UNAUTHORIZED, erro.getStatusCode());
 
+        verify(usuarioRepository).findByEmail("inexistente@email.com");
         verifyNoInteractions(correcaoAvaliacaoService);
-    }
-
-    @Test
-    void deveFinalizarAvaliacaoComGoogle() {
-        Authentication authentication = autenticacaoOAuth(
-                "google",
-                Map.of("sub", "google-123")
-        );
-
-        Usuario usuario = mock(Usuario.class);
-        ResultadoAvaliacaoResponse resultado = mock(ResultadoAvaliacaoResponse.class);
-
-        when(usuarioRepository.findByProvedorAndProvedorId(
-                ProvedorAutenticacao.GOOGLE, "google-123"))
-                .thenReturn(Optional.of(usuario));
-
-        when(correcaoAvaliacaoService.corrigir(request, usuario))
-                .thenReturn(resultado);
-
-        ResultadoAvaliacaoResponse resposta =
-                controller.finalizar(request, authentication);
-
-        assertSame(resultado, resposta);
-
-        verify(usuarioRepository).findByProvedorAndProvedorId(
-                ProvedorAutenticacao.GOOGLE, "google-123"
-        );
-    }
-
-    @Test
-    void deveAceitarGoogleComNomeMaiusculo() {
-        Authentication authentication = autenticacaoOAuth(
-                "GOOGLE",
-                Map.of("sub", "google-456")
-        );
-
-        Usuario usuario = mock(Usuario.class);
-        ResultadoAvaliacaoResponse resultado = mock(ResultadoAvaliacaoResponse.class);
-
-        when(usuarioRepository.findByProvedorAndProvedorId(
-                ProvedorAutenticacao.GOOGLE, "google-456"))
-                .thenReturn(Optional.of(usuario));
-
-        when(correcaoAvaliacaoService.corrigir(request, usuario))
-                .thenReturn(resultado);
-
-        assertSame(
-                resultado,
-                controller.finalizar(request, authentication)
-        );
-    }
-
-    @Test
-    void deveNegarGoogleSemIdentificador() {
-        Authentication authentication = autenticacaoOAuth(
-                "google",
-                Map.of("email", "usuario@gmail.com")
-        );
-
-        ResponseStatusException erro = assertThrows(
-                ResponseStatusException.class,
-                () -> controller.finalizar(request, authentication)
-        );
-
-        assertEquals(HttpStatus.UNAUTHORIZED, erro.getStatusCode());
-
-        verifyNoInteractions(usuarioRepository, correcaoAvaliacaoService);
-    }
-
-    @Test
-    void deveNegarGoogleQuandoUsuarioNaoExiste() {
-        Authentication authentication = autenticacaoOAuth(
-                "google",
-                Map.of("sub", "google-123")
-        );
-
-        when(usuarioRepository.findByProvedorAndProvedorId(
-                ProvedorAutenticacao.GOOGLE, "google-123"))
-                .thenReturn(Optional.empty());
-
-        ResponseStatusException erro = assertThrows(
-                ResponseStatusException.class,
-                () -> controller.finalizar(request, authentication)
-        );
-
-        assertEquals(HttpStatus.UNAUTHORIZED, erro.getStatusCode());
-
-        verifyNoInteractions(correcaoAvaliacaoService);
-    }
-
-    @Test
-    void deveNegarProvedorOAuthDesconhecido() {
-        Authentication authentication = autenticacaoOAuth(
-                "facebook",
-                Map.of("id", "123")
-        );
-
-        ResponseStatusException erro = assertThrows(
-                ResponseStatusException.class,
-                () -> controller.finalizar(request, authentication)
-        );
-
-        assertEquals(HttpStatus.UNAUTHORIZED, erro.getStatusCode());
-
-        verifyNoInteractions(usuarioRepository, correcaoAvaliacaoService);
     }
 
     @Test
@@ -341,6 +186,34 @@ class CorrecaoAvaliacaoControllerTest {
         );
 
         assertEquals("Avaliação inválida.", erro.getMessage());
+
+        verify(correcaoAvaliacaoService).corrigir(request, usuario);
+    }
+
+    @Test
+    void devePropagarErroDeProcessamentoDaAvaliacao() {
+        Authentication authentication = autenticacaoLocal("teste@email.com");
+        Usuario usuario = mock(Usuario.class);
+
+        when(usuarioRepository.findByEmail("teste@email.com"))
+                .thenReturn(Optional.of(usuario));
+
+        when(correcaoAvaliacaoService.corrigir(request, usuario))
+                .thenThrow(new IllegalStateException(
+                        "Não foi possível processar a avaliação."
+                ));
+
+        IllegalStateException erro = assertThrows(
+                IllegalStateException.class,
+                () -> controller.finalizar(request, authentication)
+        );
+
+        assertEquals(
+                "Não foi possível processar a avaliação.",
+                erro.getMessage()
+        );
+
+        verify(correcaoAvaliacaoService).corrigir(request, usuario);
     }
 
     private Authentication autenticacaoLocal(String email) {
@@ -348,25 +221,6 @@ class CorrecaoAvaliacaoControllerTest {
                 email,
                 null,
                 List.of()
-        );
-    }
-
-    private Authentication autenticacaoOAuth(
-            String provedor,
-            Map<String, Object> atributos) {
-
-        OAuth2User usuarioOAuth = new DefaultOAuth2User(
-                List.of(() -> "ROLE_USER"),
-                atributos,
-                atributos.containsKey("id") ? "id" :
-                        atributos.containsKey("sub") ? "sub" :
-                        atributos.keySet().iterator().next()
-        );
-
-        return new OAuth2AuthenticationToken(
-                usuarioOAuth,
-                usuarioOAuth.getAuthorities(),
-                provedor
         );
     }
 }

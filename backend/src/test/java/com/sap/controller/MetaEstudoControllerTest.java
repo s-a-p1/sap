@@ -4,19 +4,16 @@ package com.sap.controller;
 import com.sap.model.Assunto;
 import com.sap.model.Disciplina;
 import com.sap.model.MetaEstudo;
-import com.sap.model.ProvedorAutenticacao;
 import com.sap.model.Usuario;
 import com.sap.repository.UsuarioRepository;
 import com.sap.service.MetaEstudoService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -64,6 +61,8 @@ class MetaEstudoControllerTest {
 
         assertErro(resposta, HttpStatus.UNAUTHORIZED,
                 "Usuário não autenticado.");
+
+        verifyNoInteractions(usuarioRepository, metaEstudoService);
     }
 
     @Test
@@ -83,6 +82,19 @@ class MetaEstudoControllerTest {
     @Test
     void deveNegarListagemParaProfessor() {
         Authentication authentication = autenticarLocal("PROFESSOR");
+
+        ResponseEntity<?> resposta =
+                controller.listarMetas(authentication);
+
+        assertErro(resposta, HttpStatus.FORBIDDEN,
+                "Acesso permitido apenas a estudantes.");
+
+        verifyNoInteractions(metaEstudoService);
+    }
+
+    @Test
+    void deveNegarListagemParaAdministrador() {
+        Authentication authentication = autenticarLocal("ADMIN");
 
         ResponseEntity<?> resposta =
                 controller.listarMetas(authentication);
@@ -160,6 +172,35 @@ class MetaEstudoControllerTest {
         assertErro(resposta, HttpStatus.UNAUTHORIZED,
                 "Usuário não autenticado.");
 
+        verifyNoInteractions(usuarioRepository, metaEstudoService);
+    }
+
+    @Test
+    void deveNegarGeracaoComAutenticacaoInvalida() {
+        Authentication authentication = mock(Authentication.class);
+
+        when(authentication.isAuthenticated()).thenReturn(false);
+
+        ResponseEntity<?> resposta =
+                controller.gerarMetas(authentication);
+
+        assertErro(resposta, HttpStatus.UNAUTHORIZED,
+                "Usuário não autenticado.");
+
+        verifyNoInteractions(usuarioRepository, metaEstudoService);
+    }
+
+    @Test
+    void deveNegarGeracaoQuandoUsuarioNaoExiste() {
+        Authentication authentication = autenticacaoLocal();
+
+        ResponseEntity<?> resposta =
+                controller.gerarMetas(authentication);
+
+        assertErro(resposta, HttpStatus.UNAUTHORIZED,
+                "Usuário não autenticado.");
+
+        verify(usuarioRepository).findByEmail("estudante@email.com");
         verifyNoInteractions(metaEstudoService);
     }
 
@@ -204,7 +245,7 @@ class MetaEstudoControllerTest {
         assertErro(resposta, HttpStatus.UNAUTHORIZED,
                 "Usuário não autenticado.");
 
-        verifyNoInteractions(metaEstudoService);
+        verifyNoInteractions(usuarioRepository, metaEstudoService);
     }
 
     @Test
@@ -220,6 +261,8 @@ class MetaEstudoControllerTest {
 
         assertErro(resposta, HttpStatus.FORBIDDEN,
                 "Acesso permitido apenas a estudantes.");
+
+        verifyNoInteractions(metaEstudoService);
     }
 
     @Test
@@ -284,6 +327,8 @@ class MetaEstudoControllerTest {
                 Map.of("id", 10L, "concluida", false),
                 resposta.getBody()
         );
+
+        verify(metaEstudoService).atualizarConclusao(10L, 1L, false);
     }
 
     @Test
@@ -307,99 +352,21 @@ class MetaEstudoControllerTest {
     }
 
     @Test
-    void deveAutenticarEstudantePeloGitHub() {
-        Authentication authentication = autenticacaoOAuth(
-                "github",
-                Map.of("id", 12345)
-        );
-
-        Usuario usuario = usuario("ESTUDANTE");
-
-        when(usuarioRepository.findByProvedorAndProvedorId(
-                ProvedorAutenticacao.GITHUB, "12345"))
-                .thenReturn(Optional.of(usuario));
+    void deveNegarAtualizacaoQuandoUsuarioNaoExiste() {
+        Authentication authentication = autenticacaoLocal();
 
         ResponseEntity<?> resposta =
-                controller.gerarMetas(authentication);
-
-        assertEquals(HttpStatus.OK, resposta.getStatusCode());
-
-        verify(usuarioRepository).findByProvedorAndProvedorId(
-                ProvedorAutenticacao.GITHUB, "12345"
-        );
-
-        verify(metaEstudoService).gerarMetasAutomaticamente(1L);
-    }
-
-    @Test
-    void deveAutenticarEstudantePeloGoogle() {
-        Authentication authentication = autenticacaoOAuth(
-                "google",
-                Map.of("sub", "google-123")
-        );
-
-        Usuario usuario = usuario("ESTUDANTE");
-
-        when(usuarioRepository.findByProvedorAndProvedorId(
-                ProvedorAutenticacao.GOOGLE, "google-123"))
-                .thenReturn(Optional.of(usuario));
-
-        ResponseEntity<?> resposta =
-                controller.gerarMetas(authentication);
-
-        assertEquals(HttpStatus.OK, resposta.getStatusCode());
-
-        verify(usuarioRepository).findByProvedorAndProvedorId(
-                ProvedorAutenticacao.GOOGLE, "google-123"
-        );
-    }
-
-    @Test
-    void deveNegarGitHubSemIdentificador() {
-        Authentication authentication = autenticacaoOAuth(
-                "github",
-                Map.of("login", "usuario")
-        );
-
-        ResponseEntity<?> resposta =
-                controller.gerarMetas(authentication);
+                controller.atualizarConclusao(
+                        10L,
+                        Map.of("concluida", true),
+                        authentication
+                );
 
         assertErro(resposta, HttpStatus.UNAUTHORIZED,
                 "Usuário não autenticado.");
 
-        verifyNoInteractions(usuarioRepository, metaEstudoService);
-    }
-
-    @Test
-    void deveNegarGoogleSemIdentificador() {
-        Authentication authentication = autenticacaoOAuth(
-                "google",
-                Map.of("email", "usuario@gmail.com")
-        );
-
-        ResponseEntity<?> resposta =
-                controller.gerarMetas(authentication);
-
-        assertErro(resposta, HttpStatus.UNAUTHORIZED,
-                "Usuário não autenticado.");
-
-        verifyNoInteractions(usuarioRepository, metaEstudoService);
-    }
-
-    @Test
-    void deveNegarProvedorDesconhecido() {
-        Authentication authentication = autenticacaoOAuth(
-                "facebook",
-                Map.of("id", "123")
-        );
-
-        ResponseEntity<?> resposta =
-                controller.gerarMetas(authentication);
-
-        assertErro(resposta, HttpStatus.UNAUTHORIZED,
-                "Usuário não autenticado.");
-
-        verifyNoInteractions(usuarioRepository, metaEstudoService);
+        verify(usuarioRepository).findByEmail("estudante@email.com");
+        verifyNoInteractions(metaEstudoService);
     }
 
     private Authentication autenticacaoLocal() {
@@ -427,28 +394,6 @@ class MetaEstudoControllerTest {
         when(usuario.getTipo()).thenReturn(tipo);
 
         return usuario;
-    }
-
-    private Authentication autenticacaoOAuth(
-            String provedor,
-            Map<String, Object> atributos) {
-
-        String atributoPrincipal =
-                atributos.containsKey("id") ? "id" :
-                atributos.containsKey("sub") ? "sub" :
-                atributos.keySet().iterator().next();
-
-        OAuth2User usuarioOAuth = new DefaultOAuth2User(
-                List.of(() -> "ROLE_USER"),
-                atributos,
-                atributoPrincipal
-        );
-
-        return new OAuth2AuthenticationToken(
-                usuarioOAuth,
-                usuarioOAuth.getAuthorities(),
-                provedor
-        );
     }
 
     private MetaEstudo meta(Long id, boolean concluida) {

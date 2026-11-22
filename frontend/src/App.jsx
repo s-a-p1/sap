@@ -25,48 +25,6 @@ async function fetchProtegido(url, options = {}) {
   });
 }
 
-function GoogleIcon() {
-  return (
-    <svg
-      className="oauth-icon"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <path
-        fill="#4285F4"
-        d="M21.35 12.22c0-.74-.07-1.45-.19-2.13H12v4.03h5.24a4.48 4.48 0 0 1-1.94 2.94v2.62h3.14c1.84-1.69 2.91-4.19 2.91-7.46Z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 21.75c2.62 0 4.82-.87 6.43-2.36l-3.14-2.62c-.87.58-1.98.93-3.29.93-2.53 0-4.67-1.71-5.44-4.01H3.32v2.7A9.72 9.72 0 0 0 12 21.75Z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M6.56 13.69A5.85 5.85 0 0 1 6.25 12c0-.59.1-1.16.31-1.69v-2.7H3.32A9.73 9.73 0 0 0 2.25 12c0 1.57.38 3.05 1.07 4.39l3.24-2.7Z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 6.3c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.82 3.39 14.62 2.25 12 2.25a9.72 9.72 0 0 0-8.68 5.36l3.24 2.7C7.33 8.01 9.47 6.3 12 6.3Z"
-      />
-    </svg>
-  );
-}
-
-function GitHubIcon() {
-  return (
-    <svg
-      className="oauth-icon github-svg"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <path
-        fill="currentColor"
-        d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.56v-2.23c-3.22.7-3.9-1.37-3.9-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.04 1.78 2.72 1.27 3.38.97.1-.75.41-1.27.74-1.56-2.57-.29-5.27-1.29-5.27-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.47.11-3.05 0 0 .97-.31 3.16 1.18A10.98 10.98 0 0 1 12 6.11c.98 0 1.94.13 2.85.38 2.2-1.49 3.16-1.18 3.16-1.18.63 1.58.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.71 5.39-5.29 5.68.42.36.79 1.07.79 2.16v3.26c0 .31.21.68.8.56A11.5 11.5 0 0 0 12 .7Z"
-      />
-    </svg>
-  );
-}
-
 function App() {
   const [assuntosPorDisciplina, setAssuntosPorDisciplina] = useState({});
   const [disciplinaAssuntosAberta, setDisciplinaAssuntosAberta] = useState(null);
@@ -1846,22 +1804,8 @@ useEffect(() => {
 
 
   useEffect(() => {
-    const parametros = new URLSearchParams(window.location.search);
-    const oauthError = parametros.get("oauthError");
-
-    if (oauthError) {
-      setErroAuth(oauthError);
-
-      window.history.replaceState(
-        {},
-        document.title,
-        window.location.pathname
-      );
-    }
-
-    verificarSessao();
-  }, []);
-
+  verificarSessao();
+}, []);
 
 useEffect(() => {
   if (
@@ -2041,7 +1985,7 @@ useEffect(() => {
   carregarCursos();
 }, [usuario?.tipo, configuracaoAcademica?.configurado]);
 
-async function aceitarTermosOAuth() {
+async function aceitarTermos() {
   try {
     setProcessandoAuth(true);
     setErroAuth("");
@@ -2303,16 +2247,6 @@ async function aceitarTermosOAuth() {
     } finally {
       setProcessandoAuth(false);
     }
-  }
-
-  function entrarComGoogle() {
-    window.location.href =
-      `${API_URL}/oauth2/authorization/google`;
-  }
-
-  function entrarComGitHub() {
-    window.location.href =
-      `${API_URL}/oauth2/authorization/github`;
   }
 
   async function fazerLogout() {
@@ -3457,7 +3391,7 @@ function selecionarResposta(questaoId, alternativa) {
             className="botao-principal"
             type="button"
             disabled={!aceitouTermos || processandoAuth}
-            onClick={aceitarTermosOAuth}
+            onClick={aceitarTermos}
           >
             {processandoAuth
               ? "Aguarde..."

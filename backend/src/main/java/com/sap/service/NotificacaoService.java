@@ -5,10 +5,8 @@ import com.sap.model.Notificacao;
 import com.sap.model.Usuario;
 import com.sap.repository.NotificacaoRepository;
 import com.sap.repository.UsuarioRepository;
-import com.sap.model.ProvedorAutenticacao;
+
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,35 +31,6 @@ public class NotificacaoService {
 
         if (authentication == null
                 || !authentication.isAuthenticated()) {
-            return Optional.empty();
-        }
-
-        if (authentication instanceof OAuth2AuthenticationToken oauthToken) {
-            String registrationId = oauthToken.getAuthorizedClientRegistrationId();
-            OAuth2User oauth2User = oauthToken.getPrincipal();
-
-            if ("github".equalsIgnoreCase(registrationId)) {
-                Object id = oauth2User.getAttribute("id");
-
-                return id == null
-                        ? Optional.empty()
-                        : usuarioRepository.findByProvedorAndProvedorId(
-                                ProvedorAutenticacao.GITHUB,
-                                id.toString()
-                        );
-            }
-
-            if ("google".equalsIgnoreCase(registrationId)) {
-                Object sub = oauth2User.getAttribute("sub");
-
-                return sub == null
-                        ? Optional.empty()
-                        : usuarioRepository.findByProvedorAndProvedorId(
-                                ProvedorAutenticacao.GOOGLE,
-                                sub.toString()
-                        );
-            }
-
             return Optional.empty();
         }
 

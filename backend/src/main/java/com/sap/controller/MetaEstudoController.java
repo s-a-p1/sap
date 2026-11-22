@@ -2,7 +2,6 @@
 package com.sap.controller;
 
 import com.sap.model.MetaEstudo;
-import com.sap.model.ProvedorAutenticacao;
 import com.sap.model.Usuario;
 import com.sap.repository.UsuarioRepository;
 import com.sap.service.MetaEstudoService;
@@ -10,8 +9,6 @@ import com.sap.service.MetaEstudoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -53,7 +50,7 @@ public class MetaEstudoController {
         metaEstudoService.gerarMetasAutomaticamente(usuario.getId());
 
         List<MetaEstudo> metas =
-        metaEstudoService.listarMetas(usuario.getId());
+                metaEstudoService.listarMetas(usuario.getId());
 
         List<Map<String, Object>> resposta = metas.stream()
                 .map(meta -> Map.<String, Object>of(
@@ -146,42 +143,6 @@ public class MetaEstudoController {
             Authentication authentication) {
 
         if (authentication == null || !authentication.isAuthenticated()) {
-            return Optional.empty();
-        }
-
-        if (authentication instanceof OAuth2AuthenticationToken oauthToken) {
-
-            String registrationId =
-                    oauthToken.getAuthorizedClientRegistrationId();
-
-            OAuth2User oauth2User = oauthToken.getPrincipal();
-
-            if ("github".equalsIgnoreCase(registrationId)) {
-                Object id = oauth2User.getAttribute("id");
-
-                if (id == null) {
-                    return Optional.empty();
-                }
-
-                return usuarioRepository.findByProvedorAndProvedorId(
-                        ProvedorAutenticacao.GITHUB,
-                        id.toString()
-                );
-            }
-
-            if ("google".equalsIgnoreCase(registrationId)) {
-                Object sub = oauth2User.getAttribute("sub");
-
-                if (sub == null) {
-                    return Optional.empty();
-                }
-
-                return usuarioRepository.findByProvedorAndProvedorId(
-                        ProvedorAutenticacao.GOOGLE,
-                        sub.toString()
-                );
-            }
-
             return Optional.empty();
         }
 

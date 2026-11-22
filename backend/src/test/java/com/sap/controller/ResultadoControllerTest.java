@@ -5,7 +5,6 @@ import com.sap.model.Assunto;
 import com.sap.model.Avaliacao;
 import com.sap.model.DesempenhoAssunto;
 import com.sap.model.Disciplina;
-import com.sap.model.ProvedorAutenticacao;
 import com.sap.model.Resultado;
 import com.sap.model.Usuario;
 import com.sap.repository.DesempenhoAssuntoRepository;
@@ -17,9 +16,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -58,7 +54,7 @@ class ResultadoControllerTest {
         assertErro(resposta, HttpStatus.UNAUTHORIZED,
                 "Usuário não autenticado.");
 
-        verifyNoInteractions(resultadoRepository);
+        verifyNoInteractions(usuarioRepository, resultadoRepository);
     }
 
     @Test
@@ -72,6 +68,8 @@ class ResultadoControllerTest {
 
         assertErro(resposta, HttpStatus.UNAUTHORIZED,
                 "Usuário não autenticado.");
+
+        verifyNoInteractions(usuarioRepository, resultadoRepository);
     }
 
     @Test
@@ -85,11 +83,25 @@ class ResultadoControllerTest {
                 "Usuário não autenticado.");
 
         verify(usuarioRepository).findByEmail("estudante@email.com");
+        verifyNoInteractions(resultadoRepository);
     }
 
     @Test
     void deveNegarHistoricoParaProfessor() {
         Authentication authentication = autenticarLocal("PROFESSOR");
+
+        ResponseEntity<?> resposta =
+                controller.meuHistorico(authentication);
+
+        assertErro(resposta, HttpStatus.FORBIDDEN,
+                "Acesso permitido apenas a estudantes.");
+
+        verifyNoInteractions(resultadoRepository);
+    }
+
+    @Test
+    void deveNegarHistoricoParaAdministrador() {
+        Authentication authentication = autenticarLocal("ADMIN");
 
         ResponseEntity<?> resposta =
                 controller.meuHistorico(authentication);
@@ -166,6 +178,41 @@ class ResultadoControllerTest {
         assertErro(resposta, HttpStatus.UNAUTHORIZED,
                 "Usuário não autenticado.");
 
+        verifyNoInteractions(
+                usuarioRepository,
+                desempenhoAssuntoRepository
+        );
+    }
+
+    @Test
+    void deveNegarDesempenhoComAutenticacaoInvalida() {
+        Authentication authentication = mock(Authentication.class);
+
+        when(authentication.isAuthenticated()).thenReturn(false);
+
+        ResponseEntity<?> resposta =
+                controller.meuDesempenhoAssuntos(authentication);
+
+        assertErro(resposta, HttpStatus.UNAUTHORIZED,
+                "Usuário não autenticado.");
+
+        verifyNoInteractions(
+                usuarioRepository,
+                desempenhoAssuntoRepository
+        );
+    }
+
+    @Test
+    void deveNegarDesempenhoQuandoUsuarioNaoExiste() {
+        Authentication authentication = autenticacaoLocal();
+
+        ResponseEntity<?> resposta =
+                controller.meuDesempenhoAssuntos(authentication);
+
+        assertErro(resposta, HttpStatus.UNAUTHORIZED,
+                "Usuário não autenticado.");
+
+        verify(usuarioRepository).findByEmail("estudante@email.com");
         verifyNoInteractions(desempenhoAssuntoRepository);
     }
 
@@ -178,6 +225,21 @@ class ResultadoControllerTest {
 
         assertErro(resposta, HttpStatus.FORBIDDEN,
                 "Acesso permitido apenas a estudantes.");
+
+        verifyNoInteractions(desempenhoAssuntoRepository);
+    }
+
+    @Test
+    void deveNegarDesempenhoParaAdministrador() {
+        Authentication authentication = autenticarLocal("ADMIN");
+
+        ResponseEntity<?> resposta =
+                controller.meuDesempenhoAssuntos(authentication);
+
+        assertErro(resposta, HttpStatus.FORBIDDEN,
+                "Acesso permitido apenas a estudantes.");
+
+        verifyNoInteractions(desempenhoAssuntoRepository);
     }
 
     @Test
@@ -238,92 +300,6 @@ class ResultadoControllerTest {
 
         verify(desempenhoAssuntoRepository)
                 .findByResultado_UsuarioIdOrderByResultado_DataRealizacaoDesc(25L);
-    }
-
-    @Test
-    void deveAutenticarHistoricoPeloGitHub() {
-        Authentication authentication = autenticacaoOAuth(
-                "github",
-                Map.of("id", 12345)
-        );
-
-        Usuario usuario = usuario("ESTUDANTE", 1L);
-
-        when(usuarioRepository.findByProvedorAndProvedorId(
-                ProvedorAutenticacao.GITHUB, "12345"))
-                .thenReturn(Optional.of(usuario));
-
-        ResponseEntity<?> resposta =
-                controller.meuHistorico(authentication);
-
-        assertEquals(HttpStatus.OK, resposta.getStatusCode());
-
-        verify(resultadoRepository)
-                .findByUsuarioIdOrderByDataRealizacaoDesc(1L);
-    }
-
-    @Test
-    void deveAutenticarDesempenhoPeloGoogle() {
-        Authentication authentication = autenticacaoOAuth(
-                "google",
-                Map.of("sub", "google-123")
-        );
-
-        Usuario usuario = usuario("ESTUDANTE", 1L);
-
-        when(usuarioRepository.findByProvedorAndProvedorId(
-                ProvedorAutenticacao.GOOGLE, "google-123"))
-                .thenReturn(Optional.of(usuario));
-
-        ResponseEntity<?> resposta =
-                controller.meuDesempenhoAssuntos(authentication);
-
-        assertEquals(HttpStatus.OK, resposta.getStatusCode());
-
-        verify(desempenhoAssuntoRepository)
-                .findByResultado_UsuarioIdOrderByResultado_DataRealizacaoDesc(1L);
-    }
-
-    @Test
-    void deveNegarGitHubSemIdentificador() {
-        Authentication authentication = autenticacaoOAuth(
-                "github",
-                Map.of("login", "usuario")
-        );
-
-        ResponseEntity<?> resposta =
-                controller.meuHistorico(authentication);
-
-        assertErro(resposta, HttpStatus.UNAUTHORIZED,
-                "Usuário não autenticado.");
-    }
-
-    @Test
-    void deveNegarGoogleSemIdentificador() {
-        Authentication authentication = autenticacaoOAuth(
-                "google",
-                Map.of("email", "usuario@gmail.com")
-        );
-
-        ResponseEntity<?> resposta =
-                controller.meuHistorico(authentication);
-
-        assertErro(resposta, HttpStatus.UNAUTHORIZED,
-                "Usuário não autenticado.");
-    }
-
-    @Test
-    void deveNegarProvedorDesconhecido() {
-        Authentication authentication = autenticacaoOAuth(
-                "facebook",
-                Map.of("id", "123")
-        );
-
-        ResponseEntity<?> resposta =
-                controller.meuHistorico(authentication);
-
-        assertErro(resposta, HttpStatus.UNAUTHORIZED,
-                "Usuário não autenticado.");
     }
 
     private void verificarPrioridade(
@@ -444,28 +420,6 @@ class ResultadoControllerTest {
         when(usuario.getId()).thenReturn(id);
 
         return usuario;
-    }
-
-    private Authentication autenticacaoOAuth(
-            String provedor,
-            Map<String, Object> atributos) {
-
-        String atributoPrincipal =
-                atributos.containsKey("id") ? "id" :
-                atributos.containsKey("sub") ? "sub" :
-                atributos.keySet().iterator().next();
-
-        OAuth2User usuarioOAuth = new DefaultOAuth2User(
-                List.of(() -> "ROLE_USER"),
-                atributos,
-                atributoPrincipal
-        );
-
-        return new OAuth2AuthenticationToken(
-                usuarioOAuth,
-                usuarioOAuth.getAuthorities(),
-                provedor
-        );
     }
 
     private void assertErro(

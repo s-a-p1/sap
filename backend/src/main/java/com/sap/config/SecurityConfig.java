@@ -2,8 +2,6 @@
 package com.sap.config;
 
 import com.sap.service.CustomUserDetailsService;
-import com.sap.service.GitHubOAuth2UserService;
-import com.sap.service.GoogleOAuth2UserService;
 
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -18,7 +16,6 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
@@ -27,7 +24,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -56,9 +52,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            DaoAuthenticationProvider authenticationProvider,
-            GitHubOAuth2UserService gitHubOAuth2UserService,
-            GoogleOAuth2UserService googleOAuth2UserService)
+            DaoAuthenticationProvider authenticationProvider)
             throws Exception {
 
         http
@@ -74,13 +68,11 @@ public class SecurityConfig {
                         .csrfTokenRequestHandler(
                                 new CsrfTokenRequestAttributeHandler()
                         )
-
                         .ignoringRequestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/cadastro",
                                 "/api/auth/esqueci-senha"
                         )
-
                 )
 
                 .exceptionHandling(exceptions -> exceptions
@@ -104,93 +96,16 @@ public class SecurityConfig {
                         )
                 )
 
-                .oauth2Login(oauth -> oauth
-                        .userInfoEndpoint(userInfo -> userInfo
-                                .userService(gitHubOAuth2UserService)
-                                .oidcUserService(googleOAuth2UserService)
-                        )
-
-                        .defaultSuccessUrl(
-                                "http://localhost:5173",
-                                true
-                        )
-
-                        .failureHandler((request, response, exception) -> {
-
-                            String mensagem =
-                                    "Não foi possível realizar o login.";
-
-                            String codigoErro = null;
-
-                            if (exception
-                                    instanceof OAuth2AuthenticationException oauthException) {
-
-                                codigoErro =
-                                        oauthException
-                                                .getError()
-                                                .getErrorCode();
-                            }
-
-                            if ("usuario_inativo".equals(codigoErro)) {
-
-                                mensagem =
-                                        "Esta conta está inativa. Entre em contato com o suporte.";
-
-                            } else {
-
-                                String detalhe =
-                                        exception.getMessage();
-
-                                if (detalhe != null) {
-
-                                    String detalheNormalizado =
-                                            detalhe.toLowerCase();
-
-                                    if (detalheNormalizado.contains(
-                                            "já existe uma conta cadastrada com este e-mail"
-                                    )) {
-
-                                        mensagem =
-                                                "Não foi possível realizar o login. "
-                                                + "Este e-mail já está vinculado a outra forma de login.";
-
-                                    } else if (detalheNormalizado.contains(
-                                            "não foi possível obter um e-mail válido"
-                                    )) {
-
-                                        mensagem =
-                                                "Não foi possível realizar o login. "
-                                                + "Não foi possível obter um e-mail válido da sua conta.";
-                                    }
-                                }
-                            }
-
-                            String mensagemCodificada =
-                                    URLEncoder.encode(
-                                            mensagem,
-                                            StandardCharsets.UTF_8
-                                    );
-
-                            response.sendRedirect(
-                                    "http://localhost:5173/?oauthError="
-                                            + mensagemCodificada
-                            );
-                        })
-                )
-
                 .authorizeHttpRequests(auth -> auth
 
-                .requestMatchers(
-                        "/api/auth/csrf",
-                        "/api/auth/cadastro",
-                        "/api/auth/login",
-                        "/api/auth/esqueci-senha",
-                        "/api/auth/redefinir-senha",
-                        "/oauth2/**",
-                        "/login/oauth2/**"
-                )
-                .permitAll()
-
+                        .requestMatchers(
+                                "/api/auth/csrf",
+                                "/api/auth/cadastro",
+                                "/api/auth/login",
+                                "/api/auth/esqueci-senha",
+                                "/api/auth/redefinir-senha"
+                        )
+                        .permitAll()
 
                         .requestMatchers(
                                 "/api/auth/me",
