@@ -251,14 +251,14 @@ class RecuperacaoSenhaServiceTest {
 
     @Test
     void deveRejeitarTokenNulo() {
-        assertFalse(service.redefinirSenha(null, "novaSenha123"));
+        assertFalse(service.redefinirSenha(null, "novaSenha@123"));
 
         verifyNoInteractions(geradorToken);
     }
 
     @Test
     void deveRejeitarTokenVazio() {
-        assertFalse(service.redefinirSenha("   ", "novaSenha123"));
+        assertFalse(service.redefinirSenha("   ", "novaSenha@123"));
 
         verifyNoInteractions(geradorToken);
     }
@@ -272,14 +272,14 @@ class RecuperacaoSenhaServiceTest {
 
     @Test
     void deveRejeitarSenhaComMenosDeOitoCaracteres() {
-        assertFalse(service.redefinirSenha("token", "1234567"));
+        assertFalse(service.redefinirSenha("token", "Ab@1234"));
 
         verifyNoInteractions(geradorToken);
     }
 
     @Test
     void deveRejeitarSenhaComMaisDeSetentaEDoisCaracteres() {
-        assertFalse(service.redefinirSenha("token", "a".repeat(73)));
+        assertFalse(service.redefinirSenha("token", "Ab@1" + "a".repeat(69)));
 
         verifyNoInteractions(geradorToken);
     }
@@ -291,7 +291,7 @@ class RecuperacaoSenhaServiceTest {
         when(tokenRepository.findByTokenHashComBloqueio("hash"))
                 .thenReturn(Optional.empty());
 
-        assertFalse(service.redefinirSenha("token", "12345678"));
+        assertFalse(service.redefinirSenha("token", "Ab@12345"));
 
         verify(tokenRepository).findByTokenHashComBloqueio("hash");
     }
@@ -303,7 +303,7 @@ class RecuperacaoSenhaServiceTest {
         when(tokenRepository.findByTokenHashComBloqueio("hash"))
                 .thenReturn(Optional.empty());
 
-        assertFalse(service.redefinirSenha("token", "a".repeat(72)));
+        assertFalse(service.redefinirSenha("token", "Ab@1" + "a".repeat(68)));
 
         verify(tokenRepository).findByTokenHashComBloqueio("hash");
     }
@@ -315,7 +315,7 @@ class RecuperacaoSenhaServiceTest {
         when(tokenRepository.findByTokenHashComBloqueio("hash"))
                 .thenReturn(Optional.empty());
 
-        assertFalse(service.redefinirSenha("token", "novaSenha123"));
+        assertFalse(service.redefinirSenha("token", "novaSenha@123"));
 
         verifyNoInteractions(passwordEncoder);
     }
@@ -330,7 +330,7 @@ class RecuperacaoSenhaServiceTest {
 
         configurarTokenEncontrado(recuperacao);
 
-        assertFalse(service.redefinirSenha("token", "novaSenha123"));
+        assertFalse(service.redefinirSenha("token", "novaSenha@123"));
 
         verifyNoInteractions(passwordEncoder);
     }
@@ -345,7 +345,7 @@ class RecuperacaoSenhaServiceTest {
 
         configurarTokenEncontrado(recuperacao);
 
-        assertFalse(service.redefinirSenha("token", "novaSenha123"));
+        assertFalse(service.redefinirSenha("token", "novaSenha@123"));
 
         verifyNoInteractions(passwordEncoder);
     }
@@ -357,7 +357,7 @@ class RecuperacaoSenhaServiceTest {
 
         configurarTokenEncontrado(recuperacao);
 
-        assertFalse(service.redefinirSenha("token", "novaSenha123"));
+        assertFalse(service.redefinirSenha("token", "novaSenha@123"));
 
         verifyNoInteractions(passwordEncoder);
     }
@@ -369,7 +369,7 @@ class RecuperacaoSenhaServiceTest {
 
         configurarTokenEncontrado(recuperacao);
 
-        assertFalse(service.redefinirSenha("token", "novaSenha123"));
+        assertFalse(service.redefinirSenha("token", "novaSenha@123"));
 
         verifyNoInteractions(passwordEncoder);
     }
@@ -382,11 +382,11 @@ class RecuperacaoSenhaServiceTest {
 
         configurarTokenEncontrado(recuperacao);
 
-        when(passwordEncoder.encode("novaSenha123"))
+        when(passwordEncoder.encode("novaSenha@123"))
                 .thenReturn("senha-criptografada");
 
         boolean resultado =
-                service.redefinirSenha("token", "novaSenha123");
+                service.redefinirSenha("token", "novaSenha@123");
 
         assertTrue(resultado);
 
@@ -442,4 +442,16 @@ class RecuperacaoSenhaServiceTest {
         when(tokenRepository.findByTokenHashComBloqueio("hash"))
                 .thenReturn(Optional.of(recuperacao));
     }
+
+    @Test
+    void deveRejeitarRedefinicaoComSenhaSemComplexidade() {
+        assertFalse(
+                service.redefinirSenha("token", "novaSenha123")
+        );
+
+        verifyNoInteractions(geradorToken);
+        verifyNoInteractions(tokenRepository);
+        verifyNoInteractions(passwordEncoder);
+    }
+
 }

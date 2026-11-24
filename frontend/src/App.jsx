@@ -1036,6 +1036,8 @@ async function excluirDisciplinaProfessor() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [confirmarSenhaCadastro, setConfirmarSenhaCadastro] = useState("");
+  const [mostrarConfirmarSenhaCadastro, setMostrarConfirmarSenhaCadastro] = useState(false);
 
   const [paginaRecuperacao, setPaginaRecuperacao] = useState(
     () => window.location.pathname
@@ -1138,9 +1140,16 @@ useEffect(() => {
 const salvarPerfil = async (event) => {
   event.preventDefault();
 
-  setSalvandoPerfil(true);
   setMensagemPerfil("");
   setErroPerfil("");
+
+  if (emailPerfil.trim().toLowerCase() !== (usuario?.email || "").trim().toLowerCase() &&
+      !/^[^\s@]+@(?:[a-zA-Z0-9-]+[.])+[a-zA-Z]{2,}$/.test(emailPerfil.trim())) {
+    setErroPerfil("Informe um endereço de e-mail válido.");
+    return;
+  }
+
+  setSalvandoPerfil(true);
 
   try {
     const tokenCsrf = document.cookie
@@ -1194,6 +1203,11 @@ const alterarSenhaPerfil = async (event) => {
 
   if (novaSenhaPerfil.length < 8) {
     setErroSenhaPerfil("A nova senha deve ter pelo menos 8 caracteres.");
+    return;
+  }
+
+  if (!/[A-Z]/.test(novaSenhaPerfil) || !/[a-z]/.test(novaSenhaPerfil) || !/[0-9]/.test(novaSenhaPerfil) || !/[!-/:-@[-`{-~]/.test(novaSenhaPerfil)) {
+    setErroSenhaPerfil("A nova senha deve conter uma letra maiúscula, uma letra minúscula, um número e um caractere especial.");
     return;
   }
 
@@ -1544,6 +1558,24 @@ async function cadastrarProfessorAdmin(evento) {
   evento.preventDefault();
 
   if (cadastrandoProfessorAdmin) {
+    return;
+  }
+
+  if (!/^[^\s@]+@(?:[a-zA-Z0-9-]+[.])+[a-zA-Z]{2,}$/.test(emailProfessorAdmin.trim())) {
+    setErroCadastroProfessorAdmin("Informe um endereço de e-mail válido.");
+    setSucessoCadastroProfessorAdmin("");
+    return;
+  }
+
+  if (senhaProfessorAdmin.length < 6) {
+    setErroCadastroProfessorAdmin("A senha deve possuir pelo menos 6 caracteres.");
+    setSucessoCadastroProfessorAdmin("");
+    return;
+  }
+
+  if (!/[A-Z]/.test(senhaProfessorAdmin) || !/[a-z]/.test(senhaProfessorAdmin) || !/[0-9]/.test(senhaProfessorAdmin) || !/[!-/:-@[-`{-~]/.test(senhaProfessorAdmin)) {
+    setErroCadastroProfessorAdmin("A senha deve conter uma letra maiúscula, uma letra minúscula, um número e um caractere especial.");
+    setSucessoCadastroProfessorAdmin("");
     return;
   }
 
@@ -2120,6 +2152,9 @@ async function aceitarTermos() {
     setModoAuth(modo);
     limparMensagensAuth();
     setSenha("");
+    setConfirmarSenhaCadastro("");
+    setMostrarSenha(false);
+    setMostrarConfirmarSenhaCadastro(false);
     setAceitouTermos(false);
 
     if (modo === "login") {
@@ -2176,13 +2211,28 @@ async function aceitarTermos() {
     event.preventDefault();
     limparMensagensAuth();
 
-    if (!nome.trim() || !email.trim() || !senha) {
+    if (!nome.trim() || !email.trim() || !senha || !confirmarSenhaCadastro) {
       setErroAuth("Preencha todos os campos.");
+      return;
+    }
+
+    if (!/^[^\s@]+@(?:[a-zA-Z0-9-]+[.])+[a-zA-Z]{2,}$/.test(email.trim())) {
+      setErroAuth("Informe um endereço de e-mail válido.");
       return;
     }
 
     if (senha.length < 6) {
       setErroAuth("A senha deve possuir pelo menos 6 caracteres.");
+      return;
+    }
+
+    if (!/[A-Z]/.test(senha) || !/[a-z]/.test(senha) || !/[0-9]/.test(senha) || !/[!-/:-@[-`{-~]/.test(senha)) {
+      setErroAuth("A senha deve conter uma letra maiúscula, uma letra minúscula, um número e um caractere especial.");
+      return;
+    }
+
+    if (senha !== confirmarSenhaCadastro) {
+      setErroAuth("As senhas não coincidem.");
       return;
     }
 
@@ -2233,6 +2283,9 @@ async function aceitarTermos() {
       setModoAuth("login");
       setNome("");
       setSenha("");
+      setConfirmarSenhaCadastro("");
+      setMostrarSenha(false);
+      setMostrarConfirmarSenhaCadastro(false);
       setAceitouTermos(false);
 
       setSucessoAuth(
@@ -3442,6 +3495,11 @@ if (!usuario && paginaRecuperacao === "/redefinir-senha") {
                 return;
               }
 
+              if (!/[A-Z]/.test(novaSenhaRecuperacao) || !/[a-z]/.test(novaSenhaRecuperacao) || !/[0-9]/.test(novaSenhaRecuperacao) || !/[!-/:-@[-`{-~]/.test(novaSenhaRecuperacao)) {
+                setErroRecuperacao("A nova senha deve conter uma letra maiúscula, uma letra minúscula, um número e um caractere especial.");
+                return;
+              }
+
               if (novaSenhaRecuperacao !== confirmarSenhaRecuperacao) {
                 setErroRecuperacao("As senhas não coincidem.");
                 return;
@@ -3852,6 +3910,75 @@ if (!usuario && paginaRecuperacao === "/esqueci-senha") {
                   </button>
                 </div>
               </div>
+
+              {cadastro && (
+                <div className="cadastro-senha-requisitos" aria-live="polite">
+                  <p>Sua senha deve conter:</p>
+
+                  {[
+                    ["Mínimo de 6 caracteres", senha.length >= 6],
+                    ["Uma letra maiúscula", /[A-Z]/.test(senha)],
+                    ["Uma letra minúscula", /[a-z]/.test(senha)],
+                    ["Um número", /[0-9]/.test(senha)],
+                    ["Um caractere especial", /[!-/:-@[-`{-~]/.test(senha)],
+                  ].map(([texto, valido]) => (
+                    <div
+                      key={texto}
+                      className={valido ? "requisito-atendido" : "requisito-pendente"}
+                    >
+                      <span>{valido ? "✓" : "○"}</span>
+                      {texto}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {cadastro && (
+                <div className="campo">
+                  <label htmlFor="confirmar-senha-cadastro">
+                    Confirmar senha
+                  </label>
+
+                  <div className="campo-senha">
+                    <input
+                      id="confirmar-senha-cadastro"
+                      type={mostrarConfirmarSenhaCadastro ? "text" : "password"}
+                      autoComplete="new-password"
+                      placeholder="Digite novamente sua senha"
+                      value={confirmarSenhaCadastro}
+                      onChange={(event) =>
+                        setConfirmarSenhaCadastro(event.target.value)
+                      }
+                    />
+
+                    <button
+                      type="button"
+                      className="mostrar-senha"
+                      onClick={() =>
+                        setMostrarConfirmarSenhaCadastro((anterior) => !anterior)
+                      }
+                      aria-label={mostrarConfirmarSenhaCadastro ? "Ocultar confirmação" : "Mostrar confirmação"}
+                    >
+                      {mostrarConfirmarSenhaCadastro ? "Ocultar" : "Mostrar"}
+                    </button>
+                  </div>
+
+                  {confirmarSenhaCadastro && (
+                    <span
+                      className={
+                        senha === confirmarSenhaCadastro
+                          ? "cadastro-confirmacao-valida"
+                          : "cadastro-confirmacao-invalida"
+                      }
+                      aria-live="polite"
+                    >
+                      {senha === confirmarSenhaCadastro
+                        ? "As senhas coincidem."
+                        : "As senhas não coincidem."}
+                    </span>
+                  )}
+                </div>
+              )}
 
                 {!cadastro && (
                 <div className="recuperacao-senha-link">

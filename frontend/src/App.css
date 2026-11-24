@@ -6992,3 +6992,48 @@ button.home-acao-card:hover {
     width: 100%;
   }
 }
+
+.cadastro-senha-requisitos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  text-align: left;
+  font-size: 12px;
+}
+
+.cadastro-senha-requisitos p {
+  margin: 0 0 4px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.cadastro-senha-requisitos > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  line-height: 1.4;
+}
+
+.cadastro-senha-requisitos .requisito-atendido {
+  color: #15803d;
+}
+
+.cadastro-senha-requisitos .requisito-pendente {
+  color: #64748b;
+}
+
+.cadastro-confirmacao-valida {
+  color: #15803d;
+  font-size: 12px;
+  text-align: left;
+}
+
+.cadastro-confirmacao-invalida {
+  color: #dc2626;
+  font-size: 12px;
+  text-align: left;
+}

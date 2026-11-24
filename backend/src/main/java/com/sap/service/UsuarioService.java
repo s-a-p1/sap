@@ -2,6 +2,7 @@
 package com.sap.service;
 
 import com.sap.dto.CadastroUsuarioRequest;
+import com.sap.validation.ValidadorCredenciais;
 import com.sap.model.ProvedorAutenticacao;
 import com.sap.model.Usuario;
 import com.sap.repository.AnaliseDesempenhoRepository;
@@ -132,8 +133,11 @@ public class UsuarioService {
             );
         }
 
-        if (!emailNormalizado.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
-            throw new IllegalArgumentException("Informe um e-mail válido.");
+        if (!usuario.getEmail().equalsIgnoreCase(emailNormalizado)
+                && !ValidadorCredenciais.emailValido(emailNormalizado)) {
+            throw new IllegalArgumentException(
+                    ValidadorCredenciais.MENSAGEM_EMAIL
+            );
         }
 
         if (!usuario.getEmail().equals(emailNormalizado)
@@ -166,6 +170,12 @@ public class UsuarioService {
         if (novaSenha == null || novaSenha.length() < 8) {
             throw new IllegalArgumentException(
                     "A nova senha deve ter pelo menos 8 caracteres."
+            );
+        }
+
+        if (!ValidadorCredenciais.senhaValida(novaSenha)) {
+            throw new IllegalArgumentException(
+                    ValidadorCredenciais.MENSAGEM_SENHA
             );
         }
 

@@ -316,7 +316,7 @@ class UsuarioServiceTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> service.alterarSenha(
-                        99L, "senhaAtual", "novaSenha123"
+                        99L, "senhaAtual", "novaSenha@123"
                 )
         );
     }
@@ -328,7 +328,7 @@ class UsuarioServiceTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> service.alterarSenha(
-                        1L, "   ", "novaSenha123"
+                        1L, "   ", "novaSenha@123"
                 )
         );
     }
@@ -355,7 +355,7 @@ class UsuarioServiceTest {
         IllegalArgumentException erro = assertThrows(
                 IllegalArgumentException.class,
                 () -> service.alterarSenha(
-                        1L, "senhaErrada", "novaSenha123"
+                        1L, "senhaErrada", "novaSenha@123"
                 )
         );
 
@@ -368,13 +368,13 @@ class UsuarioServiceTest {
     void deveRejeitarNovaSenhaIgualAAntiga() {
         configurarUsuarioExistente();
 
-        when(passwordEncoder.matches("senhaAtual", "hash-atual"))
+        when(passwordEncoder.matches("SenhaAtual@123", "hash-atual"))
                 .thenReturn(true);
 
         IllegalArgumentException erro = assertThrows(
                 IllegalArgumentException.class,
                 () -> service.alterarSenha(
-                        1L, "senhaAtual", "senhaAtual"
+                        1L, "SenhaAtual@123", "SenhaAtual@123"
                 )
         );
 
@@ -393,19 +393,19 @@ class UsuarioServiceTest {
         when(passwordEncoder.matches("senhaAtual", "hash-atual"))
                 .thenReturn(true);
 
-        when(passwordEncoder.matches("novaSenha123", "hash-atual"))
+        when(passwordEncoder.matches("novaSenha@123", "hash-atual"))
                 .thenReturn(false);
 
-        when(passwordEncoder.encode("novaSenha123"))
+        when(passwordEncoder.encode("novaSenha@123"))
                 .thenReturn("novo-hash");
 
         service.alterarSenha(
-                1L, "senhaAtual", "novaSenha123"
+                1L, "senhaAtual", "novaSenha@123"
         );
 
         assertEquals("novo-hash", usuario.getSenha());
 
-        verify(passwordEncoder).encode("novaSenha123");
+        verify(passwordEncoder).encode("novaSenha@123");
         verify(usuarioRepository).save(usuario);
     }
 
@@ -652,4 +652,56 @@ class UsuarioServiceTest {
 
         return usuario;
     }
+
+    @Test
+    void devePermitirManterEmailAntigoSemExtensao() {
+        Usuario usuario = configurarUsuarioExistente();
+        usuario.setEmail("admin@sap");
+
+        when(usuarioRepository.save(usuario)).thenReturn(usuario);
+
+        Usuario resultado = service.atualizarPerfil(
+                1L, "Nome Atualizado", "admin@sap"
+        );
+
+        assertEquals("Nome Atualizado", resultado.getNome());
+        assertEquals("admin@sap", resultado.getEmail());
+
+        verify(usuarioRepository, never()).existsByEmail(anyString());
+        verify(usuarioRepository).save(usuario);
+    }
+
+    @Test
+    void deveRejeitarAlteracaoParaEmailSemExtensao() {
+        configurarUsuarioExistente();
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.atualizarPerfil(
+                        1L, "Nome Atualizado", "novo@sap"
+                )
+        );
+
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void deveRejeitarNovaSenhaSemComplexidade() {
+        configurarUsuarioExistente();
+
+        IllegalArgumentException erro = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.alterarSenha(
+                        1L, "senhaAtual", "novaSenha123"
+                )
+        );
+
+        assertEquals(
+                com.sap.validation.ValidadorCredenciais.MENSAGEM_SENHA,
+                erro.getMessage()
+        );
+
+        verify(usuarioRepository, never()).save(any());
+    }
+
 }

@@ -1,6 +1,8 @@
 
 package com.sap.service;
 
+import com.sap.validation.ValidadorCredenciais;
+
 import com.sap.model.TokenRecuperacaoSenha;
 import com.sap.model.Usuario;
 import com.sap.model.ProvedorAutenticacao;
@@ -114,7 +116,8 @@ public class RecuperacaoSenhaService {
     public boolean redefinirSenha(String token, String novaSenha) {
         if (token == null || token.isBlank()
                 || novaSenha == null || novaSenha.length() < 8
-                || novaSenha.length() > 72) {
+                || novaSenha.length() > 72
+                || !ValidadorCredenciais.senhaValida(novaSenha)) {
             return false;
         }
 

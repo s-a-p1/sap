@@ -1,7 +1,9 @@
 package com.sap.dto;
 
 import jakarta.validation.constraints.AssertTrue;
+import com.sap.validation.ValidadorCredenciais;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -12,12 +14,20 @@ public class CadastroUsuarioRequest {
 
     @NotBlank(message = "O e-mail é obrigatório.")
     @Email(message = "Informe um e-mail válido.")
+    @Pattern(
+            regexp = ValidadorCredenciais.EMAIL_REGEX,
+            message = ValidadorCredenciais.MENSAGEM_EMAIL
+    )
     private String email;
 
     @NotBlank(message = "A senha é obrigatória.")
     @Size(
             min = 6,
             message = "A senha deve possuir pelo menos 6 caracteres."
+    )
+    @Pattern(
+            regexp = ValidadorCredenciais.SENHA_REGEX,
+            message = ValidadorCredenciais.MENSAGEM_SENHA
     )
     private String senha;
 
